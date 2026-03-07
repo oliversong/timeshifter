@@ -1,12 +1,22 @@
 import { useState, useCallback } from 'react'
 
+const SESSION_PREFIX = '__dev_form_'
+
+/** Clear all session-persisted form values (call after successful submit). */
+export function clearSessionFormState() {
+  for (let i = sessionStorage.length - 1; i >= 0; i--) {
+    const k = sessionStorage.key(i)
+    if (k?.startsWith(SESSION_PREFIX)) sessionStorage.removeItem(k)
+  }
+}
+
 /**
  * Like useState, but persists to sessionStorage so values survive
  * Vite HMR refreshes during development. The stored value is cleared
  * when the browser tab closes.
  */
 export function useSessionState<T>(key: string, defaultValue: T) {
-  const storageKey = `__dev_form_${key}`
+  const storageKey = `${SESSION_PREFIX}${key}`
 
   const [value, setValue] = useState<T>(() => {
     try {

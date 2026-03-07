@@ -3,7 +3,7 @@ import DatePicker from 'react-datepicker'
 import { DateTime } from 'luxon'
 import type { FlightPlan, FlightPlanDates } from '../types'
 import { TimezoneSelect } from './TimezoneSelect'
-import { useSessionState } from '../hooks/useSessionState'
+import { useSessionState, clearSessionFormState } from '../hooks/useSessionState'
 import 'react-datepicker/dist/react-datepicker.css'
 
 
@@ -136,6 +136,8 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
       setError('Days at destination must be between 1 and 60.')
       return
     }
+
+    clearSessionFormState()
 
     onSubmit({
       homeTimezone,
