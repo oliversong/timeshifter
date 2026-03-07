@@ -16,7 +16,10 @@ function planToStorable(plan: FlightPlanDates): FlightPlan {
     destWakeTime: plan.destWakeTime,
     departureTime: plan.departureTime.toISO() ?? '',
     arrivalTime: plan.arrivalTime.toISO() ?? '',
-    daysAtDestination: plan.daysAtDestination,
+    returnDepartureTimezone: plan.returnDepartureTimezone,
+    returnDepartureTime: plan.returnDepartureTime.toISO() ?? '',
+    returnArrivalTimezone: plan.returnArrivalTimezone,
+    returnArrivalTime: plan.returnArrivalTime.toISO() ?? '',
   }
 }
 
@@ -97,10 +100,17 @@ export default function App() {
                 </div>
               )}
               <div className="flex justify-between text-slate-300">
-                <span>Flight</span>
+                <span>Outbound</span>
                 <span className="font-medium text-white">
                   {currentPlan.departureTime.toFormat('EEE MMM d, h:mm a')} →{' '}
                   {currentPlan.arrivalTime.setZone(currentPlan.arrivalTimezone).toFormat('EEE MMM d, h:mm a')}
+                </span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Return</span>
+                <span className="font-medium text-white">
+                  {currentPlan.returnDepartureTime.setZone(currentPlan.returnDepartureTimezone).toFormat('EEE MMM d, h:mm a')} →{' '}
+                  {currentPlan.returnArrivalTime.setZone(currentPlan.returnArrivalTimezone).toFormat('EEE MMM d, h:mm a')}
                 </span>
               </div>
             </div>

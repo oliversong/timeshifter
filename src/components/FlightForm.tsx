@@ -21,7 +21,10 @@ const DEFAULT_PLAN: FlightPlan = {
   destWakeTime: '',
   departureTime: '',
   arrivalTime: '',
-  daysAtDestination: 7,
+  returnDepartureTimezone: 'Asia/Shanghai',
+  returnDepartureTime: '',
+  returnArrivalTimezone: 'America/Los_Angeles',
+  returnArrivalTime: '',
 }
 
 /** Parse "HH:mm" time string into a JS Date (today's date, local clock) */
@@ -71,7 +74,18 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
   const [arrivalDate, setArrivalDate] = useState<Date | null>(
     init.arrivalTime ? isoToLocalDate(init.arrivalTime, init.arrivalTimezone) : null
   )
-  const [daysAtDestination, setDaysAtDestination] = useState(init.daysAtDestination)
+  const [returnDepartureTimezone, setReturnDepartureTimezone] = useState(
+    init.returnDepartureTimezone || init.arrivalTimezone
+  )
+  const [returnDepartureDate, setReturnDepartureDate] = useState<Date | null>(
+    init.returnDepartureTime ? isoToLocalDate(init.returnDepartureTime, init.returnDepartureTimezone) : null
+  )
+  const [returnArrivalTimezone, setReturnArrivalTimezone] = useState(
+    init.returnArrivalTimezone || init.homeTimezone
+  )
+  const [returnArrivalDate, setReturnArrivalDate] = useState<Date | null>(
+    init.returnArrivalTime ? isoToLocalDate(init.returnArrivalTime, init.returnArrivalTimezone) : null
+  )
   const [error, setError] = useState<string | null>(null)
 
   function handleSubmit(e: React.FormEvent) {
@@ -79,7 +93,12 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
     setError(null)
 
     if (!departureDate || !arrivalDate) {
-      setError('Please select departure and arrival times.')
+      setError('Please select outbound departure and arrival times.')
+      return
+    }
+
+    if (!returnDepartureDate || !returnArrivalDate) {
+      setError('Please select return departure and arrival times.')
       return
     }
 
@@ -106,18 +125,50 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
       { zone: arrivalTimezone }
     )
 
+    const returnDepartureTime = DateTime.fromObject(
+      {
+        year: returnDepartureDate.getFullYear(),
+        month: returnDepartureDate.getMonth() + 1,
+        day: returnDepartureDate.getDate(),
+        hour: returnDepartureDate.getHours(),
+        minute: returnDepartureDate.getMinutes(),
+      },
+      { zone: returnDepartureTimezone }
+    )
+
+    const returnArrivalTime = DateTime.fromObject(
+      {
+        year: returnArrivalDate.getFullYear(),
+        month: returnArrivalDate.getMonth() + 1,
+        day: returnArrivalDate.getDate(),
+        hour: returnArrivalDate.getHours(),
+        minute: returnArrivalDate.getMinutes(),
+      },
+      { zone: returnArrivalTimezone }
+    )
+
     if (!departureTime.isValid || !arrivalTime.isValid) {
-      setError('Invalid departure or arrival time.')
+      setError('Invalid outbound departure or arrival time.')
+      return
+    }
+
+    if (!returnDepartureTime.isValid || !returnArrivalTime.isValid) {
+      setError('Invalid return departure or arrival time.')
       return
     }
 
     if (arrivalTime <= departureTime) {
-      setError('Arrival time must be after departure time.')
+      setError('Outbound arrival must be after departure.')
       return
     }
 
-    if (daysAtDestination < 1 || daysAtDestination > 60) {
-      setError('Days at destination must be between 1 and 60.')
+    if (returnDepartureTime <= arrivalTime) {
+      setError('Return departure must be after outbound arrival.')
+      return
+    }
+
+    if (returnArrivalTime <= returnDepartureTime) {
+      setError('Return arrival must be after return departure.')
       return
     }
 
@@ -131,7 +182,10 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
       destWakeTime: showCustomSchedule && destWakeTime ? destWakeTime : undefined,
       departureTime,
       arrivalTime,
-      daysAtDestination,
+      returnDepartureTimezone,
+      returnDepartureTime,
+      returnArrivalTimezone,
+      returnArrivalTime,
     })
   }
 
@@ -235,16 +289,59 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-slate-300">Days at Destination</label>
-          <input
-            type="number"
-            min={1}
-            max={60}
-            value={daysAtDestination}
-            onChange={e => setDaysAtDestination(Number(e.target.value))}
-            className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-32"
+      </section>
+
+      {/* Return flight details */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold text-white border-b border-slate-700 pb-2">
+          Return Flight
+        </h2>
+        <div className="space-y-3">
+          <TimezoneSelect
+            label="Return Departure Timezone"
+            value={returnDepartureTimezone}
+            onChange={setReturnDepartureTimezone}
           />
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-slate-300">Return Departure Date & Time</label>
+            <DatePicker
+              selected={returnDepartureDate}
+              onChange={setReturnDepartureDate}
+              showTimeSelect
+              timeIntervals={5}
+              timeCaption="Time"
+              dateFormat="MMM d, yyyy  h:mm aa"
+              placeholderText="Select date & time"
+              className={pickerClass}
+            />
+            {returnDepartureDate && (
+              <p className="text-xs text-slate-400">Local time in {returnDepartureTimezone}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <TimezoneSelect
+            label="Return Arrival Timezone"
+            value={returnArrivalTimezone}
+            onChange={setReturnArrivalTimezone}
+          />
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-slate-300">Return Arrival Date & Time</label>
+            <DatePicker
+              selected={returnArrivalDate}
+              onChange={setReturnArrivalDate}
+              showTimeSelect
+              timeIntervals={5}
+              timeCaption="Time"
+              dateFormat="MMM d, yyyy  h:mm aa"
+              placeholderText="Select date & time"
+              className={pickerClass}
+            />
+            {returnArrivalDate && (
+              <p className="text-xs text-slate-400">Local time in {returnArrivalTimezone}</p>
+            )}
+          </div>
         </div>
       </section>
 

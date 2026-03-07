@@ -8,9 +8,12 @@ export interface FlightPlan {
   arrivalTimezone: string
   destSleepTime?: string  // custom destination bedtime "23:00"
   destWakeTime?: string   // custom destination wake time "07:00"
-  departureTime: string   // ISO string stored in localStorage
-  arrivalTime: string     // ISO string stored in localStorage
-  daysAtDestination: number
+  departureTime: string          // ISO string stored in localStorage
+  arrivalTime: string            // ISO string stored in localStorage
+  returnDepartureTimezone: string
+  returnDepartureTime: string    // ISO string stored in localStorage
+  returnArrivalTimezone: string
+  returnArrivalTime: string      // ISO string stored in localStorage
 }
 
 export interface FlightPlanDates {
@@ -23,7 +26,10 @@ export interface FlightPlanDates {
   destWakeTime?: string
   departureTime: DateTime
   arrivalTime: DateTime
-  daysAtDestination: number
+  returnDepartureTimezone: string
+  returnDepartureTime: DateTime
+  returnArrivalTimezone: string
+  returnArrivalTime: DateTime
 }
 
 export type RecommendationType =
