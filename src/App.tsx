@@ -37,91 +37,54 @@ export default function App() {
     setView('results')
   }
 
+  if (view === 'results' && plans && currentPlan) {
+    return (
+      <PlanTimeline
+        plans={plans}
+        homeTimezone={currentPlan.homeTimezone}
+        destTimezone={currentPlan.arrivalTimezone}
+        onEditFlight={() => setView('form')}
+        sidebarInfo={{
+          from: currentPlan.departureTimezone,
+          to: currentPlan.arrivalTimezone,
+          outboundLabel: `${currentPlan.departureTime.toFormat('EEE MMM d, h:mm a')} → ${currentPlan.arrivalTime.setZone(currentPlan.arrivalTimezone).toFormat('EEE MMM d, h:mm a')}`,
+          returnLabel: `${currentPlan.returnDepartureTime.setZone(currentPlan.returnDepartureTimezone).toFormat('EEE MMM d, h:mm a')} → ${currentPlan.returnArrivalTime.setZone(currentPlan.returnArrivalTimezone).toFormat('EEE MMM d, h:mm a')}`,
+          destSchedule: (currentPlan.destSleepTime || currentPlan.destWakeTime)
+            ? `sleep ${currentPlan.destSleepTime ?? currentPlan.homeSleepTime} / wake ${currentPlan.destWakeTime ?? currentPlan.homeWakeTime}`
+            : undefined,
+        }}
+      />
+    )
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 text-white">
-      {/* Header */}
       <header className="border-b border-slate-800 px-4 py-4">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">
-              Timeshifter
-            </h1>
-            <p className="text-xs text-slate-400">Free jetlag planner — no account needed</p>
-          </div>
-          {view === 'results' && (
-            <button
-              type="button"
-              onClick={() => setView('form')}
-              className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
-            >
-              Edit flight
-            </button>
-          )}
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-xl font-bold text-white tracking-tight">Timeshifter</h1>
+          <p className="text-xs text-slate-400">Free jetlag planner — no account needed</p>
         </div>
       </header>
 
-      <main className={`mx-auto px-4 py-6 ${view === 'form' ? 'max-w-2xl' : 'max-w-5xl'}`}>
-        {view === 'form' ? (
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <p className="text-slate-300 text-sm leading-relaxed">
-                Get a personalized schedule for melatonin, light exposure, and sleep
-                to minimize jetlag — based on real chronobiology.
-              </p>
-              <div className="flex flex-wrap justify-center gap-3 text-xs text-slate-500">
-                <span>Free &amp; open source</span>
-                <span>·</span>
-                <span>No account</span>
-                <span>·</span>
-                <span>0.5mg melatonin (science-backed dose)</span>
-                <span>·</span>
-                <span>Custom destination schedule</span>
-              </div>
+      <main className="max-w-2xl mx-auto px-4 py-6">
+        <div className="space-y-6">
+          <div className="text-center space-y-2">
+            <p className="text-slate-300 text-sm leading-relaxed">
+              Get a personalized schedule for melatonin, light exposure, and sleep
+              to minimize jetlag — based on real chronobiology.
+            </p>
+            <div className="flex flex-wrap justify-center gap-3 text-xs text-slate-500">
+              <span>Free &amp; open source</span>
+              <span>·</span>
+              <span>No account</span>
+              <span>·</span>
+              <span>0.5mg melatonin (science-backed dose)</span>
+              <span>·</span>
+              <span>Custom destination schedule</span>
             </div>
-            <FlightForm initialPlan={savedPlan} onSubmit={handleSubmit} />
           </div>
-        ) : plans && currentPlan ? (
-          <div className="space-y-4">
-            <div className="bg-slate-800 rounded-xl p-4 text-sm space-y-1">
-              <div className="flex justify-between text-slate-300">
-                <span>From</span>
-                <span className="font-medium text-white">{currentPlan.departureTimezone}</span>
-              </div>
-              <div className="flex justify-between text-slate-300">
-                <span>To</span>
-                <span className="font-medium text-white">{currentPlan.arrivalTimezone}</span>
-              </div>
-              {(currentPlan.destSleepTime || currentPlan.destWakeTime) && (
-                <div className="flex justify-between text-slate-300">
-                  <span>Destination schedule</span>
-                  <span className="font-medium text-indigo-300">
-                    sleep {currentPlan.destSleepTime ?? currentPlan.homeSleepTime} / wake {currentPlan.destWakeTime ?? currentPlan.homeWakeTime}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between text-slate-300">
-                <span>Outbound</span>
-                <span className="font-medium text-white">
-                  {currentPlan.departureTime.toFormat('EEE MMM d, h:mm a')} →{' '}
-                  {currentPlan.arrivalTime.setZone(currentPlan.arrivalTimezone).toFormat('EEE MMM d, h:mm a')}
-                </span>
-              </div>
-              <div className="flex justify-between text-slate-300">
-                <span>Return</span>
-                <span className="font-medium text-white">
-                  {currentPlan.returnDepartureTime.setZone(currentPlan.returnDepartureTimezone).toFormat('EEE MMM d, h:mm a')} →{' '}
-                  {currentPlan.returnArrivalTime.setZone(currentPlan.returnArrivalTimezone).toFormat('EEE MMM d, h:mm a')}
-                </span>
-              </div>
-            </div>
-
-            <PlanTimeline
-              plans={plans}
-              homeTimezone={currentPlan.homeTimezone}
-              destTimezone={currentPlan.arrivalTimezone}
-            />
-          </div>
-        ) : null}
+          <FlightForm initialPlan={savedPlan} onSubmit={handleSubmit} />
+        </div>
       </main>
 
       <footer className="mt-12 border-t border-slate-800 px-4 py-6">

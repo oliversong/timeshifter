@@ -2,11 +2,21 @@ import { useState, useMemo } from 'react'
 import type { DayPlan, Recommendation, RecommendationType } from '../types'
 import { getUtcOffset, formatTime } from '../lib/timezone'
 
+interface SidebarInfo {
+  from: string
+  to: string
+  outboundLabel: string
+  returnLabel: string
+  destSchedule?: string
+}
+
 interface Props {
   plans: DayPlan[]
   homeTimezone: string
   destTimezone: string
   localScheduleTimezone?: string
+  sidebarInfo: SidebarInfo
+  onEditFlight: () => void
 }
 
 type TzView = 'dest' | 'home'
@@ -75,7 +85,7 @@ function fmtDur(startMs: number, endMs: number): string {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
-export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleTimezone }: Props) {
+export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleTimezone, sidebarInfo, onEditFlight }: Props) {
   const [tzView,   setTzView]   = useState<TzView>('dest')
   const [selected, setSelected] = useState<Recommendation | null>(null)
 
@@ -197,22 +207,69 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
   // ── Timeline ──────────────────────────────────────────────────────────────
   return (
     <div
-      className="flex gap-3 items-start"
+      className="flex min-h-screen bg-slate-900 text-white"
       style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
     >
-      {/* Sticky sidebar (desktop) */}
-      <aside className="hidden sm:block w-40 shrink-0 sticky top-3 max-h-[90vh] overflow-y-auto">
-        {sidebar}
+      {/* ── Left sidebar ── */}
+      <aside
+        className="w-52 shrink-0 sticky top-0 h-screen overflow-y-auto border-r border-slate-700/40 flex flex-col"
+        style={{ backgroundColor: '#080f1c' }}
+      >
+        <div className="p-4 space-y-4 flex-1">
+          {/* Branding + edit */}
+          <div className="space-y-1.5">
+            <div>
+              <h1 className="text-white font-bold tracking-tight" style={{ fontSize: 15 }}>Timeshifter</h1>
+              <p className="text-slate-500" style={{ fontSize: 9 }}>Free jetlag planner</p>
+            </div>
+            <button
+              type="button"
+              onClick={onEditFlight}
+              className="text-indigo-400 hover:text-indigo-300 transition-colors"
+              style={{ fontSize: 11 }}
+            >
+              ← Edit flight
+            </button>
+          </div>
+
+          {/* Flight summary */}
+          <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-3 space-y-2">
+            <p className="text-slate-500 uppercase tracking-widest font-semibold" style={{ fontSize: 9 }}>
+              Flight
+            </p>
+            <div className="space-y-1.5">
+              <div>
+                <div className="text-slate-500" style={{ fontSize: 9 }}>From</div>
+                <div className="text-slate-200 font-medium" style={{ fontSize: 10 }}>{sidebarInfo.from}</div>
+              </div>
+              <div>
+                <div className="text-slate-500" style={{ fontSize: 9 }}>To</div>
+                <div className="text-slate-200 font-medium" style={{ fontSize: 10 }}>{sidebarInfo.to}</div>
+              </div>
+              {sidebarInfo.destSchedule && (
+                <div>
+                  <div className="text-slate-500" style={{ fontSize: 9 }}>Dest schedule</div>
+                  <div className="text-indigo-300" style={{ fontSize: 10 }}>{sidebarInfo.destSchedule}</div>
+                </div>
+              )}
+              <div>
+                <div className="text-slate-500" style={{ fontSize: 9 }}>Outbound</div>
+                <div className="text-slate-300" style={{ fontSize: 10, lineHeight: 1.4 }}>{sidebarInfo.outboundLabel}</div>
+              </div>
+              <div>
+                <div className="text-slate-500" style={{ fontSize: 9 }}>Return</div>
+                <div className="text-slate-300" style={{ fontSize: 10, lineHeight: 1.4 }}>{sidebarInfo.returnLabel}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* TZ toggle + legend + detail */}
+          {sidebar}
+        </div>
       </aside>
 
-      {/* Mobile controls (stacked above timeline) */}
-      <div className="flex-1 sm:hidden mb-3 space-y-2">{sidebar}</div>
-
-      {/* ── Scrollable timeline ── */}
-      <div
-        className="flex-1 min-w-0 rounded-xl border border-slate-700/50"
-        style={{ maxHeight: '78vh', overflowY: 'auto', overflowX: 'hidden' }}
-      >
+      {/* ── Timeline main ── */}
+      <main className="flex-1 min-w-0">
         {/* Sticky column header */}
         <div
           className="sticky top-0 z-30 flex items-stretch border-b border-slate-700/40"
@@ -425,7 +482,7 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
             </div>
           )
         })}
-      </div>
+      </main>
     </div>
   )
 }
