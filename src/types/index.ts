@@ -6,7 +6,8 @@ export interface FlightPlan {
   homeWakeTime: string    // "08:00"
   departureTimezone: string
   arrivalTimezone: string
-  localScheduleTimezone?: string
+  destSleepTime?: string  // custom destination bedtime "23:00"
+  destWakeTime?: string   // custom destination wake time "07:00"
   departureTime: string   // ISO string stored in localStorage
   arrivalTime: string     // ISO string stored in localStorage
   daysAtDestination: number
@@ -18,7 +19,8 @@ export interface FlightPlanDates {
   homeWakeTime: string
   departureTimezone: string
   arrivalTimezone: string
-  localScheduleTimezone?: string
+  destSleepTime?: string
+  destWakeTime?: string
   departureTime: DateTime
   arrivalTime: DateTime
   daysAtDestination: number

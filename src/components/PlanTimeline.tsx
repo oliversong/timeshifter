@@ -7,10 +7,9 @@ interface Props {
   plans: DayPlan[]
   homeTimezone: string
   destTimezone: string
-  localScheduleTimezone?: string
 }
 
-type TzView = 'dest' | 'home' | 'local'
+type TzView = 'dest' | 'home'
 
 const TIMELINE_COLORS: Record<RecommendationType, string> = {
   'sleep': 'bg-indigo-800',
@@ -69,25 +68,20 @@ function TimelineBar({ recommendations, displayTimezone }: { recommendations: Re
   )
 }
 
-export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleTimezone }: Props) {
+export function PlanTimeline({ plans, homeTimezone, destTimezone }: Props) {
   const [tzView, setTzView] = useState<TzView>('dest')
   const [expandedDay, setExpandedDay] = useState<number>(
     // Auto-expand arrival day (index 3)
     Math.min(3, plans.length - 1)
   )
 
-  const displayTz = tzView === 'home'
-    ? homeTimezone
-    : tzView === 'local' && localScheduleTimezone
-    ? localScheduleTimezone
-    : destTimezone
+  const displayTz = tzView === 'home' ? homeTimezone : destTimezone
 
   const secondaryTz = tzView !== 'home' ? homeTimezone : undefined
 
   const tzOptions: { key: TzView; label: string; tz: string }[] = [
     { key: 'dest', label: 'Destination', tz: destTimezone },
     { key: 'home', label: 'Home', tz: homeTimezone },
-    ...(localScheduleTimezone ? [{ key: 'local' as TzView, label: 'Local Schedule', tz: localScheduleTimezone }] : []),
   ]
 
   return (
