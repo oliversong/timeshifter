@@ -103,13 +103,31 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
   // Flat list of all recommendations across all days (for cross-midnight rendering)
   const allRecs = useMemo(() => plans.flatMap(p => p.recommendations), [plans])
 
-  // Per-day filtered recs. All rec types (including flights) use overlap logic
-  // so cross-midnight events show on both days, clamped to each day's boundary.
-  const dayRecsPerPlan = useMemo(() => {
+  // Merge consecutive plans that resolve to the same calendar date in the
+  // current display timezone (e.g. departure-day & arrival-day can collapse
+  // when viewed from home tz if the destination is ahead).
+  const mergedDays = useMemo(() => {
+    const result: { dayDate: DayPlan['date']; label: string }[] = []
+    for (let i = 0; i < plans.length; i++) {
+      const dayDate = plans[i].date.setZone(displayTz)
+      const dateMs  = dayDate.startOf('day').toMillis()
+      const prev    = result[result.length - 1]
+      if (prev && prev.dayDate.startOf('day').toMillis() === dateMs) {
+        prev.label += ` · ${plans[i].label}`
+      } else {
+        result.push({ dayDate, label: plans[i].label })
+      }
+    }
+    return result
+  }, [plans, displayTz])
+
+  // Per merged-day recs — overlap logic for all types including flights.
+  // Since merged days have unique calendar dates, no flight dedup is needed.
+  // Sleep recs are still deduplicated so each appears on only one day.
+  const mergedDayRecs = useMemo(() => {
     const shownSleep = new Set<Recommendation>()
-    return plans.map(plan => {
-      const dayDate    = plan.date.setZone(displayTz)
-      const dayStartMs = dayDate.startOf('day').toMillis()
+    return mergedDays.map(md => {
+      const dayStartMs = md.dayDate.startOf('day').toMillis()
       const dayEndMs   = dayStartMs + DAY_MS
       return allRecs.filter(r => {
         const rStart = r.startTime.toMillis()
@@ -125,7 +143,7 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
         return rStart < dayEndMs && rEnd > dayStartMs
       })
     })
-  }, [plans, allRecs, displayTz])
+  }, [mergedDays, allRecs])
 
   // Legend rows (without melatonin — shown separately in sleep col)
   const legendItems = useMemo(
@@ -317,12 +335,12 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
         </div>
 
         {/* Day sections */}
-        {plans.map((plan, dayIdx) => {
-          const dayDate    = plan.date.setZone(displayTz)
+        {mergedDays.map((md, dayIdx) => {
+          const dayDate    = md.dayDate
           const dayStartMs = dayDate.startOf('day').toMillis()
           const dayEndMs   = dayStartMs + DAY_MS
 
-          const dayRecs = dayRecsPerPlan[dayIdx]
+          const dayRecs = mergedDayRecs[dayIdx]
 
           return (
             <div key={dayIdx}>
@@ -339,7 +357,7 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
                 <span className="font-bold text-slate-200" style={{ fontSize: 11 }}>
                   {dayDate.toFormat('EEE, MMM d')}
                 </span>
-                <span className="text-slate-500" style={{ fontSize: 10 }}>{plan.label}</span>
+                <span className="text-slate-500" style={{ fontSize: 10 }}>{md.label}</span>
               </div>
 
               {/* 24-hour content grid */}
