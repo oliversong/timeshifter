@@ -108,6 +108,7 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
   // Other rec types use the normal overlap logic so cross-midnight events show on both sides.
   const dayRecsPerPlan = useMemo(() => {
     const shownFlights = new Set<Recommendation>()
+    const shownSleep = new Set<Recommendation>()
     return plans.map(plan => {
       const dayDate    = plan.date.setZone(displayTz)
       const dayStartMs = dayDate.startOf('day').toMillis()
@@ -119,6 +120,14 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
           if (shownFlights.has(r)) return false
           if (rStart < dayEndMs && rEnd > dayStartMs) {
             shownFlights.add(r)
+            return true
+          }
+          return false
+        }
+        if (r.type === 'sleep') {
+          if (shownSleep.has(r)) return false
+          if (rStart < dayEndMs && rEnd > dayStartMs) {
+            shownSleep.add(r)
             return true
           }
           return false
