@@ -57,7 +57,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-6">
+      <main className={`mx-auto px-4 py-6 ${view === 'form' ? 'max-w-2xl' : 'max-w-5xl'}`}>
         {view === 'form' ? (
           <div className="space-y-6">
             <div className="text-center space-y-2">
