@@ -103,11 +103,9 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
   // Flat list of all recommendations across all days (for cross-midnight rendering)
   const allRecs = useMemo(() => plans.flatMap(p => p.recommendations), [plans])
 
-  // Per-day filtered recs. Flight recs are deduplicated so each appears only once
-  // (on the first plan-day whose window overlaps the flight in the current display tz).
-  // Other rec types use the normal overlap logic so cross-midnight events show on both sides.
+  // Per-day filtered recs. All rec types (including flights) use overlap logic
+  // so cross-midnight events show on both days, clamped to each day's boundary.
   const dayRecsPerPlan = useMemo(() => {
-    const shownFlights = new Set<Recommendation>()
     const shownSleep = new Set<Recommendation>()
     return plans.map(plan => {
       const dayDate    = plan.date.setZone(displayTz)
@@ -116,14 +114,6 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
       return allRecs.filter(r => {
         const rStart = r.startTime.toMillis()
         const rEnd   = (r.endTime ?? r.startTime.plus({ minutes: 30 })).toMillis()
-        if (r.type === 'flight') {
-          if (shownFlights.has(r)) return false
-          if (rStart < dayEndMs && rEnd > dayStartMs) {
-            shownFlights.add(r)
-            return true
-          }
-          return false
-        }
         if (r.type === 'sleep') {
           if (shownSleep.has(r)) return false
           if (rStart < dayEndMs && rEnd > dayStartMs) {
