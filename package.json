@@ -10,8 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/react-datepicker": "^6.2.0",
     "luxon": "^3.5.0",
     "react": "^19.0.0",
+    "react-datepicker": "^9.1.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
