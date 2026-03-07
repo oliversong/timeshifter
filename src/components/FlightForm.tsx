@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker'
 import { DateTime } from 'luxon'
 import type { FlightPlan, FlightPlanDates } from '../types'
 import { TimezoneSelect } from './TimezoneSelect'
+import { useSessionState } from '../hooks/useSessionState'
 import 'react-datepicker/dist/react-datepicker.css'
 
 
@@ -49,29 +50,44 @@ function isoToLocalDate(iso: string, tz: string): Date | null {
   return new Date(dt.year, dt.month - 1, dt.day, dt.hour, dt.minute)
 }
 
+/** Wrapper around useSessionState that stores Date values as ISO strings */
+function useSessionDate(key: string, defaultValue: Date | null) {
+  const [raw, setRaw] = useSessionState<string | null>(
+    key,
+    defaultValue ? defaultValue.toISOString() : null
+  )
+  const value = raw ? new Date(raw) : null
+  const set = (d: Date | null) => setRaw(d ? d.toISOString() : null)
+  return [value, set] as const
+}
+
 export function FlightForm({ initialPlan, onSubmit }: Props) {
   const init = initialPlan ?? DEFAULT_PLAN
 
-  const [homeTimezone, setHomeTimezone] = useState(init.homeTimezone)
-  const [homeSleepDate, setHomeSleepDate] = useState<Date | null>(
+  const [homeTimezone, setHomeTimezone] = useSessionState('homeTimezone', init.homeTimezone)
+  const [homeSleepDate, setHomeSleepDate] = useSessionDate(
+    'homeSleepDate',
     timeStringToDate(init.homeSleepTime)
   )
-  const [homeWakeDate, setHomeWakeDate] = useState<Date | null>(
+  const [homeWakeDate, setHomeWakeDate] = useSessionDate(
+    'homeWakeDate',
     timeStringToDate(init.homeWakeTime)
   )
-  const [departureTimezone, setDepartureTimezone] = useState(init.departureTimezone)
-  const [arrivalTimezone, setArrivalTimezone] = useState(init.arrivalTimezone)
-  const [destSleepTime, setDestSleepTime] = useState(init.destSleepTime ?? '')
-  const [destWakeTime, setDestWakeTime] = useState(init.destWakeTime ?? '')
-  const [showCustomSchedule, setShowCustomSchedule] = useState(!!(init.destSleepTime || init.destWakeTime))
+  const [departureTimezone, setDepartureTimezone] = useSessionState('departureTimezone', init.departureTimezone)
+  const [arrivalTimezone, setArrivalTimezone] = useSessionState('arrivalTimezone', init.arrivalTimezone)
+  const [destSleepTime, setDestSleepTime] = useSessionState('destSleepTime', init.destSleepTime ?? '')
+  const [destWakeTime, setDestWakeTime] = useSessionState('destWakeTime', init.destWakeTime ?? '')
+  const [showCustomSchedule, setShowCustomSchedule] = useSessionState('showCustomSchedule', !!(init.destSleepTime || init.destWakeTime))
 
-  const [departureDate, setDepartureDate] = useState<Date | null>(
+  const [departureDate, setDepartureDate] = useSessionDate(
+    'departureDate',
     init.departureTime ? isoToLocalDate(init.departureTime, init.departureTimezone) : null
   )
-  const [arrivalDate, setArrivalDate] = useState<Date | null>(
+  const [arrivalDate, setArrivalDate] = useSessionDate(
+    'arrivalDate',
     init.arrivalTime ? isoToLocalDate(init.arrivalTime, init.arrivalTimezone) : null
   )
-  const [daysAtDestination, setDaysAtDestination] = useState(init.daysAtDestination)
+  const [daysAtDestination, setDaysAtDestination] = useSessionState('daysAtDestination', init.daysAtDestination)
   const [error, setError] = useState<string | null>(null)
 
   function handleSubmit(e: React.FormEvent) {
