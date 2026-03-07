@@ -235,7 +235,7 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
         {/* Day sections */}
         {plans.map((plan, dayIdx) => {
           const dayDate    = plan.date.setZone(displayTz)
-          const dayStartMs = dayDate.startOf('day').toMillis()
+          const dayStartMs = plan.date.toMillis()
 
           return (
             <div key={dayIdx}>
