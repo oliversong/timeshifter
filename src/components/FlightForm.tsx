@@ -136,13 +136,13 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
   }
 
   const pickerClass =
-    'w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer'
+    'w-full px-3 py-2 bg-white border border-stone-300 rounded-lg text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Home schedule */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-white border-b border-slate-700 pb-2">
+        <h2 className="text-lg font-semibold text-stone-800 border-b border-stone-200 pb-2">
           Your Home Schedule
         </h2>
         <TimezoneSelect
@@ -152,7 +152,7 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
         />
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-300">Usual Bedtime</label>
+            <label className="text-sm font-medium text-stone-600">Usual Bedtime</label>
             <DatePicker
               selected={homeSleepDate}
               onChange={setHomeSleepDate}
@@ -166,7 +166,7 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-300">Usual Wake Time</label>
+            <label className="text-sm font-medium text-stone-600">Usual Wake Time</label>
             <DatePicker
               selected={homeWakeDate}
               onChange={setHomeWakeDate}
@@ -184,7 +184,7 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
 
       {/* Flight details */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-white border-b border-slate-700 pb-2">
+        <h2 className="text-lg font-semibold text-stone-800 border-b border-stone-200 pb-2">
           Flight Details
         </h2>
         <div className="space-y-3">
@@ -194,7 +194,7 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
             onChange={setDepartureTimezone}
           />
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-300">Departure Date & Time</label>
+            <label className="text-sm font-medium text-stone-600">Departure Date & Time</label>
             <DatePicker
               selected={departureDate}
               onChange={setDepartureDate}
@@ -206,7 +206,7 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
               className={pickerClass}
             />
             {departureDate && (
-              <p className="text-xs text-slate-400">Local time in {departureTimezone}</p>
+              <p className="text-xs text-stone-400">Local time in {departureTimezone}</p>
             )}
           </div>
         </div>
@@ -218,7 +218,7 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
             onChange={setArrivalTimezone}
           />
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-300">Arrival Date & Time</label>
+            <label className="text-sm font-medium text-stone-600">Arrival Date & Time</label>
             <DatePicker
               selected={arrivalDate}
               onChange={setArrivalDate}
@@ -230,20 +230,20 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
               className={pickerClass}
             />
             {arrivalDate && (
-              <p className="text-xs text-slate-400">Local time in {arrivalTimezone}</p>
+              <p className="text-xs text-stone-400">Local time in {arrivalTimezone}</p>
             )}
           </div>
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-slate-300">Days at Destination</label>
+          <label className="text-sm font-medium text-stone-600">Days at Destination</label>
           <input
             type="number"
             min={1}
             max={60}
             value={daysAtDestination}
             onChange={e => setDaysAtDestination(Number(e.target.value))}
-            className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-32"
+            className="px-3 py-2 bg-white border border-stone-300 rounded-lg text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 w-32"
           />
         </div>
       </section>
@@ -253,37 +253,37 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
         <button
           type="button"
           onClick={() => setShowCustomSchedule(v => !v)}
-          className="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="flex items-center gap-2 text-sm text-teal-600 hover:text-teal-700 transition-colors"
         >
           <span className="text-lg leading-none">{showCustomSchedule ? '▾' : '▸'}</span>
           Custom Destination Sleep Schedule
-          <span className="text-xs text-slate-500 font-normal">(optional)</span>
+          <span className="text-xs text-stone-400 font-normal">(optional)</span>
         </button>
 
         {showCustomSchedule && (
-          <div className="pl-4 border-l-2 border-slate-700 space-y-3">
-            <p className="text-xs text-slate-400 leading-relaxed">
+          <div className="pl-4 border-l-2 border-stone-200 space-y-3">
+            <p className="text-xs text-stone-400 leading-relaxed">
               Use this if you'll be keeping a different sleep schedule than your home routine.
               For example, if you normally sleep at midnight but plan to sleep at 10pm at your destination.
               Leave blank to default to your home sleep times.
             </p>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-slate-300">Destination Bedtime</label>
+                <label className="text-sm font-medium text-stone-600">Destination Bedtime</label>
                 <input
                   type="time"
                   value={destSleepTime}
                   onChange={e => setDestSleepTime(e.target.value)}
-                  className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="px-3 py-2 bg-white border border-stone-300 rounded-lg text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-slate-300">Destination Wake Time</label>
+                <label className="text-sm font-medium text-stone-600">Destination Wake Time</label>
                 <input
                   type="time"
                   value={destWakeTime}
                   onChange={e => setDestWakeTime(e.target.value)}
-                  className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="px-3 py-2 bg-white border border-stone-300 rounded-lg text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
               </div>
             </div>
@@ -292,14 +292,14 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
       </section>
 
       {error && (
-        <div className="px-4 py-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm">
+        <div className="px-4 py-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-sm">
           {error}
         </div>
       )}
 
       <button
         type="submit"
-        className="w-full py-3 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+        className="w-full py-3 px-6 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-stone-50"
       >
         Generate My Plan
       </button>

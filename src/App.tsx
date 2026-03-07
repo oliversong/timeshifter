@@ -35,21 +35,21 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="min-h-screen bg-stone-50 text-stone-800">
       {/* Header */}
-      <header className="border-b border-slate-800 px-4 py-4">
+      <header className="border-b border-stone-200 bg-white px-4 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">
+            <h1 className="text-xl font-bold text-stone-900 tracking-tight">
               Timeshifter
             </h1>
-            <p className="text-xs text-slate-400">Free jetlag planner — no account needed</p>
+            <p className="text-xs text-stone-400">Free jetlag planner — no account needed</p>
           </div>
           {view === 'results' && (
             <button
               type="button"
               onClick={() => setView('form')}
-              className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+              className="text-sm text-teal-600 hover:text-teal-700 transition-colors"
             >
               Edit flight
             </button>
@@ -61,11 +61,11 @@ export default function App() {
         {view === 'form' ? (
           <div className="space-y-6">
             <div className="text-center space-y-2">
-              <p className="text-slate-300 text-sm leading-relaxed">
+              <p className="text-stone-500 text-sm leading-relaxed">
                 Get a personalized schedule for melatonin, light exposure, and sleep
                 to minimize jetlag — based on real chronobiology.
               </p>
-              <div className="flex flex-wrap justify-center gap-3 text-xs text-slate-500">
+              <div className="flex flex-wrap justify-center gap-3 text-xs text-stone-400">
                 <span>Free &amp; open source</span>
                 <span>·</span>
                 <span>No account</span>
@@ -79,26 +79,26 @@ export default function App() {
           </div>
         ) : plans && currentPlan ? (
           <div className="space-y-4">
-            <div className="bg-slate-800 rounded-xl p-4 text-sm space-y-1">
-              <div className="flex justify-between text-slate-300">
+            <div className="bg-white border border-stone-200 rounded-xl p-4 text-sm space-y-1 shadow-sm">
+              <div className="flex justify-between text-stone-500">
                 <span>From</span>
-                <span className="font-medium text-white">{currentPlan.departureTimezone}</span>
+                <span className="font-medium text-stone-800">{currentPlan.departureTimezone}</span>
               </div>
-              <div className="flex justify-between text-slate-300">
+              <div className="flex justify-between text-stone-500">
                 <span>To</span>
-                <span className="font-medium text-white">{currentPlan.arrivalTimezone}</span>
+                <span className="font-medium text-stone-800">{currentPlan.arrivalTimezone}</span>
               </div>
               {(currentPlan.destSleepTime || currentPlan.destWakeTime) && (
-                <div className="flex justify-between text-slate-300">
+                <div className="flex justify-between text-stone-500">
                   <span>Destination schedule</span>
-                  <span className="font-medium text-indigo-300">
+                  <span className="font-medium text-teal-700">
                     sleep {currentPlan.destSleepTime ?? currentPlan.homeSleepTime} / wake {currentPlan.destWakeTime ?? currentPlan.homeWakeTime}
                   </span>
                 </div>
               )}
-              <div className="flex justify-between text-slate-300">
+              <div className="flex justify-between text-stone-500">
                 <span>Flight</span>
-                <span className="font-medium text-white">
+                <span className="font-medium text-stone-800">
                   {currentPlan.departureTime.toFormat('EEE MMM d, h:mm a')} →{' '}
                   {currentPlan.arrivalTime.setZone(currentPlan.arrivalTimezone).toFormat('EEE MMM d, h:mm a')}
                 </span>
@@ -114,11 +114,11 @@ export default function App() {
         ) : null}
       </main>
 
-      <footer className="mt-12 border-t border-slate-800 px-4 py-6">
-        <div className="max-w-2xl mx-auto text-center text-xs text-slate-500 space-y-1">
+      <footer className="mt-12 border-t border-stone-200 px-4 py-6">
+        <div className="max-w-2xl mx-auto text-center text-xs text-stone-400 space-y-1">
           <p>Based on established chronobiology research. Not medical advice.</p>
           <p>Melatonin at 0.5mg is more effective for clock-shifting than 3mg doses.</p>
-          <p className="text-slate-600">Open source · localStorage only · No tracking</p>
+          <p className="text-stone-300">Open source · localStorage only · No tracking</p>
         </div>
       </footer>
     </div>

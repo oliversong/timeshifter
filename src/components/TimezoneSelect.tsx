@@ -42,7 +42,7 @@ export function TimezoneSelect({ value, onChange, label, id: idProp }: Props) {
 
   return (
     <div className="flex flex-col gap-1" ref={containerRef}>
-      <label htmlFor={id} className="text-sm font-medium text-slate-300">
+      <label htmlFor={id} className="text-sm font-medium text-stone-600">
         {label}
       </label>
       <div className="relative">
@@ -50,37 +50,37 @@ export function TimezoneSelect({ value, onChange, label, id: idProp }: Props) {
           id={id}
           type="button"
           onClick={() => setOpen(o => !o)}
-          className="w-full text-left px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center"
+          className="w-full text-left px-3 py-2 bg-white border border-stone-300 rounded-lg text-stone-800 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 flex justify-between items-center"
         >
-          <span className="truncate">{value || 'Select timezone…'}</span>
-          <span className="text-slate-400 text-xs ml-2 shrink-0">{value ? getUtcOffset(value) : ''}</span>
+          <span className="truncate">{value || 'Select timezone\u2026'}</span>
+          <span className="text-stone-400 text-xs ml-2 shrink-0">{value ? getUtcOffset(value) : ''}</span>
         </button>
 
         {open && (
-          <div className="absolute z-50 mt-1 w-full bg-slate-800 border border-slate-600 rounded-lg shadow-xl overflow-hidden">
-            <div className="p-2 border-b border-slate-700">
+          <div className="absolute z-50 mt-1 w-full bg-white border border-stone-200 rounded-lg shadow-lg overflow-hidden">
+            <div className="p-2 border-b border-stone-100">
               <input
                 autoFocus
                 type="text"
-                placeholder="Search timezones…"
+                placeholder="Search timezones\u2026"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
-                className="w-full bg-slate-700 text-white text-sm px-3 py-1.5 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-stone-50 text-stone-800 text-sm px-3 py-1.5 rounded focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
             <div className="max-h-56 overflow-y-auto">
               {filtered.length === 0 ? (
-                <div className="px-3 py-2 text-slate-400 text-sm">No results</div>
+                <div className="px-3 py-2 text-stone-400 text-sm">No results</div>
               ) : (
                 filtered.map(tz => (
                   <button
                     key={tz}
                     type="button"
                     onClick={() => handleSelect(tz)}
-                    className={`w-full text-left px-3 py-2 text-sm flex justify-between items-center hover:bg-slate-700 transition-colors ${tz === value ? 'bg-indigo-900 text-indigo-300' : 'text-white'}`}
+                    className={`w-full text-left px-3 py-2 text-sm flex justify-between items-center hover:bg-stone-50 transition-colors ${tz === value ? 'bg-teal-50 text-teal-700' : 'text-stone-700'}`}
                   >
                     <span className="truncate">{tz}</span>
-                    <span className="text-slate-400 text-xs ml-2 shrink-0">{getUtcOffset(tz)}</span>
+                    <span className="text-stone-400 text-xs ml-2 shrink-0">{getUtcOffset(tz)}</span>
                   </button>
                 ))
               )}

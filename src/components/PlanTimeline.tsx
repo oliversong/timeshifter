@@ -12,25 +12,25 @@ interface Props {
 type TzView = 'dest' | 'home'
 
 const TIMELINE_COLORS: Record<RecommendationType, string> = {
-  'sleep': 'bg-indigo-800',
-  'wake': 'bg-amber-500',
-  'melatonin': 'bg-purple-600',
-  'seek-light': 'bg-yellow-400',
-  'avoid-light': 'bg-slate-600',
-  'caffeine-ok': 'bg-green-700',
-  'avoid-caffeine': 'bg-red-800',
+  'sleep': 'bg-indigo-300',
+  'wake': 'bg-amber-300',
+  'melatonin': 'bg-violet-300',
+  'seek-light': 'bg-yellow-300',
+  'avoid-light': 'bg-stone-300',
+  'caffeine-ok': 'bg-emerald-300',
+  'avoid-caffeine': 'bg-rose-300',
 }
 
 function TimelineBar({ recommendations, displayTimezone }: { recommendations: Recommendation[], displayTimezone: string }) {
   // Render a 24-hour bar with colored blocks
   const dayStart = recommendations[0]?.startTime.setZone(displayTimezone).startOf('day')
-  if (!dayStart) return <div className="h-6 bg-slate-800 rounded" />
+  if (!dayStart) return <div className="h-6 bg-stone-100 rounded" />
 
   const dayStartMs = dayStart.toMillis()
   const dayMs = 24 * 3600 * 1000
 
   return (
-    <div className="relative h-6 bg-slate-800 rounded overflow-hidden">
+    <div className="relative h-6 bg-stone-100 rounded overflow-hidden">
       {recommendations.map((rec, i) => {
         const start = rec.startTime.setZone(displayTimezone)
         const end = rec.endTime ? rec.endTime.setZone(displayTimezone) : start.plus({ minutes: 30 })
@@ -60,7 +60,7 @@ function TimelineBar({ recommendations, displayTimezone }: { recommendations: Re
       {[6, 12, 18].map(h => (
         <div
           key={h}
-          className="absolute h-full w-px bg-slate-600/50"
+          className="absolute h-full w-px bg-stone-300/60"
           style={{ left: `${(h / 24) * 100}%` }}
         />
       ))}
@@ -88,8 +88,8 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone }: Props) {
     <div className="space-y-4">
       {/* Timezone toggle */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-slate-400">Display times in:</span>
-        <div className="flex gap-1 bg-slate-800 rounded-lg p-1">
+        <span className="text-sm text-stone-500">Display times in:</span>
+        <div className="flex gap-1 bg-stone-100 rounded-lg p-1">
           {tzOptions.map(opt => (
             <button
               key={opt.key}
@@ -97,12 +97,12 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone }: Props) {
               onClick={() => setTzView(opt.key)}
               className={`px-3 py-1 text-xs rounded-md transition-colors ${
                 tzView === opt.key
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-teal-600 text-white'
+                  : 'text-stone-500 hover:text-stone-800'
               }`}
             >
               {opt.label}
-              <span className="ml-1 text-slate-400 text-xs">{getUtcOffset(opt.tz)}</span>
+              <span className="ml-1 text-xs opacity-60">{getUtcOffset(opt.tz)}</span>
             </button>
           ))}
         </div>
@@ -113,7 +113,7 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone }: Props) {
         {(Object.entries(TIMELINE_COLORS) as [RecommendationType, string][]).map(([type, color]) => (
           <div key={type} className="flex items-center gap-1">
             <div className={`w-3 h-3 rounded-sm ${color}`} />
-            <span className="text-xs text-slate-400 capitalize">{type.replace('-', ' ')}</span>
+            <span className="text-xs text-stone-500 capitalize">{type.replace('-', ' ')}</span>
           </div>
         ))}
       </div>
@@ -125,29 +125,29 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone }: Props) {
           const dateStr = formatDate(plan.date, displayTz)
 
           return (
-            <div key={i} className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
+            <div key={i} className="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm">
               <button
                 type="button"
                 onClick={() => setExpandedDay(isExpanded ? -1 : i)}
-                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-700/30 transition-colors"
+                className="w-full px-4 py-3 flex items-center gap-3 hover:bg-stone-50 transition-colors"
               >
                 <div className="flex-1 min-w-0 text-left">
                   <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-sm font-semibold text-white">{plan.label}</span>
-                    <span className="text-xs text-slate-400">{dateStr}</span>
+                    <span className="text-sm font-semibold text-stone-800">{plan.label}</span>
+                    <span className="text-xs text-stone-400">{dateStr}</span>
                   </div>
                   <TimelineBar
                     recommendations={plan.recommendations}
                     displayTimezone={displayTz}
                   />
                 </div>
-                <span className="text-slate-500 text-sm ml-2">{isExpanded ? '▲' : '▼'}</span>
+                <span className="text-stone-400 text-sm ml-2">{isExpanded ? '▲' : '▼'}</span>
               </button>
 
               {isExpanded && (
-                <div className="px-4 pb-4 space-y-2 border-t border-slate-700 pt-3">
+                <div className="px-4 pb-4 space-y-2 border-t border-stone-100 pt-3">
                   {plan.recommendations.length === 0 ? (
-                    <p className="text-slate-400 text-sm">No specific recommendations for this day.</p>
+                    <p className="text-stone-400 text-sm">No specific recommendations for this day.</p>
                   ) : (
                     plan.recommendations.map((rec, j) => (
                       <EventCard
