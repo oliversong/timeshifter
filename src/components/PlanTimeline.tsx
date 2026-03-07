@@ -103,6 +103,31 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
   // Flat list of all recommendations across all days (for cross-midnight rendering)
   const allRecs = useMemo(() => plans.flatMap(p => p.recommendations), [plans])
 
+  // Per-day filtered recs. Flight recs are deduplicated so each appears only once
+  // (on the first plan-day whose window overlaps the flight in the current display tz).
+  // Other rec types use the normal overlap logic so cross-midnight events show on both sides.
+  const dayRecsPerPlan = useMemo(() => {
+    const shownFlights = new Set<Recommendation>()
+    return plans.map(plan => {
+      const dayDate    = plan.date.setZone(displayTz)
+      const dayStartMs = dayDate.startOf('day').toMillis()
+      const dayEndMs   = dayStartMs + DAY_MS
+      return allRecs.filter(r => {
+        const rStart = r.startTime.toMillis()
+        const rEnd   = (r.endTime ?? r.startTime.plus({ minutes: 30 })).toMillis()
+        if (r.type === 'flight') {
+          if (shownFlights.has(r)) return false
+          if (rStart < dayEndMs && rEnd > dayStartMs) {
+            shownFlights.add(r)
+            return true
+          }
+          return false
+        }
+        return rStart < dayEndMs && rEnd > dayStartMs
+      })
+    })
+  }, [plans, allRecs, displayTz])
+
   // Legend rows (without melatonin — shown separately in sleep col)
   const legendItems = useMemo(
     () => (Object.entries(META) as [RecommendationType, typeof META[RecommendationType]][])
@@ -298,13 +323,7 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
           const dayStartMs = dayDate.startOf('day').toMillis()
           const dayEndMs   = dayStartMs + DAY_MS
 
-          // Include recs from any plan that overlaps this day's 24hr window
-          // (so cross-midnight events appear on both sides of midnight)
-          const dayRecs = allRecs.filter(r => {
-            const rStart = r.startTime.toMillis()
-            const rEnd   = (r.endTime ?? r.startTime.plus({ minutes: 30 })).toMillis()
-            return rStart < dayEndMs && rEnd > dayStartMs
-          })
+          const dayRecs = dayRecsPerPlan[dayIdx]
 
           return (
             <div key={dayIdx}>
