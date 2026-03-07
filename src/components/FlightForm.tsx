@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import DatePicker from 'react-datepicker'
 import { DateTime } from 'luxon'
 import type { FlightPlan, FlightPlanDates } from '../types'
 import { TimezoneSelect } from './TimezoneSelect'
+import 'react-datepicker/dist/react-datepicker.css'
 
 interface Props {
   initialPlan: FlightPlan | null
@@ -20,30 +22,51 @@ const DEFAULT_PLAN: FlightPlan = {
   daysAtDestination: 7,
 }
 
-function toLocalDatetimeValue(iso: string, tz: string): string {
-  if (!iso) return ''
+/** Parse "HH:mm" time string into a JS Date (today's date, local clock) */
+function timeStringToDate(time: string): Date | null {
+  if (!time) return null
+  const [h, m] = time.split(':').map(Number)
+  const d = new Date()
+  d.setHours(h, m, 0, 0)
+  return d
+}
+
+/** Format a JS Date back to "HH:mm" */
+function dateToTimeString(d: Date): string {
+  const h = String(d.getHours()).padStart(2, '0')
+  const m = String(d.getMinutes()).padStart(2, '0')
+  return `${h}:${m}`
+}
+
+/** Convert an ISO string to a JS Date representing the wall-clock time in tz */
+function isoToLocalDate(iso: string, tz: string): Date | null {
+  if (!iso) return null
   const dt = DateTime.fromISO(iso).setZone(tz)
-  if (!dt.isValid) return ''
-  return dt.toFormat("yyyy-MM-dd'T'HH:mm")
+  if (!dt.isValid) return null
+  // Create a JS Date whose local clock matches the wall-clock time in tz
+  return new Date(dt.year, dt.month - 1, dt.day, dt.hour, dt.minute)
 }
 
 export function FlightForm({ initialPlan, onSubmit }: Props) {
   const init = initialPlan ?? DEFAULT_PLAN
 
   const [homeTimezone, setHomeTimezone] = useState(init.homeTimezone)
-  const [homeSleepTime, setHomeSleepTime] = useState(init.homeSleepTime)
-  const [homeWakeTime, setHomeWakeTime] = useState(init.homeWakeTime)
+  const [homeSleepDate, setHomeSleepDate] = useState<Date | null>(
+    timeStringToDate(init.homeSleepTime)
+  )
+  const [homeWakeDate, setHomeWakeDate] = useState<Date | null>(
+    timeStringToDate(init.homeWakeTime)
+  )
   const [departureTimezone, setDepartureTimezone] = useState(init.departureTimezone)
   const [arrivalTimezone, setArrivalTimezone] = useState(init.arrivalTimezone)
   const [localScheduleTimezone, setLocalScheduleTimezone] = useState(init.localScheduleTimezone ?? '')
   const [showCustomTz, setShowCustomTz] = useState(!!init.localScheduleTimezone)
 
-  // Store local datetime strings for inputs, interpret in their respective timezones
-  const [departureLocal, setDepartureLocal] = useState(
-    init.departureTime ? toLocalDatetimeValue(init.departureTime, init.departureTimezone) : ''
+  const [departureDate, setDepartureDate] = useState<Date | null>(
+    init.departureTime ? isoToLocalDate(init.departureTime, init.departureTimezone) : null
   )
-  const [arrivalLocal, setArrivalLocal] = useState(
-    init.arrivalTime ? toLocalDatetimeValue(init.arrivalTime, init.arrivalTimezone) : ''
+  const [arrivalDate, setArrivalDate] = useState<Date | null>(
+    init.arrivalTime ? isoToLocalDate(init.arrivalTime, init.arrivalTimezone) : null
   )
   const [daysAtDestination, setDaysAtDestination] = useState(init.daysAtDestination)
   const [error, setError] = useState<string | null>(null)
@@ -52,13 +75,33 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
     e.preventDefault()
     setError(null)
 
-    if (!departureLocal || !arrivalLocal) {
-      setError('Please enter departure and arrival times.')
+    if (!departureDate || !arrivalDate) {
+      setError('Please select departure and arrival times.')
       return
     }
 
-    const departureTime = DateTime.fromISO(departureLocal, { zone: departureTimezone })
-    const arrivalTime = DateTime.fromISO(arrivalLocal, { zone: arrivalTimezone })
+    // Interpret the JS Date wall-clock values as times in the respective timezones
+    const departureTime = DateTime.fromObject(
+      {
+        year: departureDate.getFullYear(),
+        month: departureDate.getMonth() + 1,
+        day: departureDate.getDate(),
+        hour: departureDate.getHours(),
+        minute: departureDate.getMinutes(),
+      },
+      { zone: departureTimezone }
+    )
+
+    const arrivalTime = DateTime.fromObject(
+      {
+        year: arrivalDate.getFullYear(),
+        month: arrivalDate.getMonth() + 1,
+        day: arrivalDate.getDate(),
+        hour: arrivalDate.getHours(),
+        minute: arrivalDate.getMinutes(),
+      },
+      { zone: arrivalTimezone }
+    )
 
     if (!departureTime.isValid || !arrivalTime.isValid) {
       setError('Invalid departure or arrival time.')
@@ -77,8 +120,8 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
 
     onSubmit({
       homeTimezone,
-      homeSleepTime,
-      homeWakeTime,
+      homeSleepTime: homeSleepDate ? dateToTimeString(homeSleepDate) : '23:00',
+      homeWakeTime: homeWakeDate ? dateToTimeString(homeWakeDate) : '07:00',
       departureTimezone,
       arrivalTimezone,
       localScheduleTimezone: showCustomTz && localScheduleTimezone ? localScheduleTimezone : undefined,
@@ -87,6 +130,9 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
       daysAtDestination,
     })
   }
+
+  const pickerClass =
+    'w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -103,20 +149,30 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-300">Usual Bedtime</label>
-            <input
-              type="time"
-              value={homeSleepTime}
-              onChange={e => setHomeSleepTime(e.target.value)}
-              className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            <DatePicker
+              selected={homeSleepDate}
+              onChange={setHomeSleepDate}
+              showTimeSelect
+              showTimeSelectOnly
+              timeIntervals={15}
+              timeCaption="Time"
+              dateFormat="h:mm aa"
+              placeholderText="Select time"
+              className={pickerClass}
             />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-300">Usual Wake Time</label>
-            <input
-              type="time"
-              value={homeWakeTime}
-              onChange={e => setHomeWakeTime(e.target.value)}
-              className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            <DatePicker
+              selected={homeWakeDate}
+              onChange={setHomeWakeDate}
+              showTimeSelect
+              showTimeSelectOnly
+              timeIntervals={15}
+              timeCaption="Time"
+              dateFormat="h:mm aa"
+              placeholderText="Select time"
+              className={pickerClass}
             />
           </div>
         </div>
@@ -135,16 +191,18 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
           />
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-300">Departure Date & Time</label>
-            <input
-              type="datetime-local"
-              value={departureLocal}
-              onChange={e => setDepartureLocal(e.target.value)}
-              className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            <DatePicker
+              selected={departureDate}
+              onChange={setDepartureDate}
+              showTimeSelect
+              timeIntervals={5}
+              timeCaption="Time"
+              dateFormat="MMM d, yyyy  h:mm aa"
+              placeholderText="Select date & time"
+              className={pickerClass}
             />
-            {departureLocal && (
-              <p className="text-xs text-slate-400">
-                Local time in {departureTimezone}
-              </p>
+            {departureDate && (
+              <p className="text-xs text-slate-400">Local time in {departureTimezone}</p>
             )}
           </div>
         </div>
@@ -157,16 +215,18 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
           />
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-300">Arrival Date & Time</label>
-            <input
-              type="datetime-local"
-              value={arrivalLocal}
-              onChange={e => setArrivalLocal(e.target.value)}
-              className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            <DatePicker
+              selected={arrivalDate}
+              onChange={setArrivalDate}
+              showTimeSelect
+              timeIntervals={5}
+              timeCaption="Time"
+              dateFormat="MMM d, yyyy  h:mm aa"
+              placeholderText="Select date & time"
+              className={pickerClass}
             />
-            {arrivalLocal && (
-              <p className="text-xs text-slate-400">
-                Local time in {arrivalTimezone}
-              </p>
+            {arrivalDate && (
+              <p className="text-xs text-slate-400">Local time in {arrivalTimezone}</p>
             )}
           </div>
         </div>
