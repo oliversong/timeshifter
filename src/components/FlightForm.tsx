@@ -5,6 +5,7 @@ import type { FlightPlan, FlightPlanDates } from '../types'
 import { TimezoneSelect } from './TimezoneSelect'
 import 'react-datepicker/dist/react-datepicker.css'
 
+
 interface Props {
   initialPlan: FlightPlan | null
   onSubmit: (plan: FlightPlanDates) => void
@@ -16,7 +17,8 @@ const DEFAULT_PLAN: FlightPlan = {
   homeWakeTime: '07:00',
   departureTimezone: 'America/Los_Angeles',
   arrivalTimezone: 'Asia/Shanghai',
-  localScheduleTimezone: '',
+  destSleepTime: '',
+  destWakeTime: '',
   departureTime: '',
   arrivalTime: '',
   daysAtDestination: 7,
@@ -59,8 +61,9 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
   )
   const [departureTimezone, setDepartureTimezone] = useState(init.departureTimezone)
   const [arrivalTimezone, setArrivalTimezone] = useState(init.arrivalTimezone)
-  const [localScheduleTimezone, setLocalScheduleTimezone] = useState(init.localScheduleTimezone ?? '')
-  const [showCustomTz, setShowCustomTz] = useState(!!init.localScheduleTimezone)
+  const [destSleepTime, setDestSleepTime] = useState(init.destSleepTime ?? '')
+  const [destWakeTime, setDestWakeTime] = useState(init.destWakeTime ?? '')
+  const [showCustomSchedule, setShowCustomSchedule] = useState(!!(init.destSleepTime || init.destWakeTime))
 
   const [departureDate, setDepartureDate] = useState<Date | null>(
     init.departureTime ? isoToLocalDate(init.departureTime, init.departureTimezone) : null
@@ -124,7 +127,8 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
       homeWakeTime: homeWakeDate ? dateToTimeString(homeWakeDate) : '07:00',
       departureTimezone,
       arrivalTimezone,
-      localScheduleTimezone: showCustomTz && localScheduleTimezone ? localScheduleTimezone : undefined,
+      destSleepTime: showCustomSchedule && destSleepTime ? destSleepTime : undefined,
+      destWakeTime: showCustomSchedule && destWakeTime ? destWakeTime : undefined,
       departureTime,
       arrivalTime,
       daysAtDestination,
@@ -244,30 +248,45 @@ export function FlightForm({ initialPlan, onSubmit }: Props) {
         </div>
       </section>
 
-      {/* Custom locale timezone */}
+      {/* Custom destination schedule */}
       <section className="space-y-3">
         <button
           type="button"
-          onClick={() => setShowCustomTz(v => !v)}
+          onClick={() => setShowCustomSchedule(v => !v)}
           className="flex items-center gap-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
         >
-          <span className="text-lg leading-none">{showCustomTz ? '▾' : '▸'}</span>
-          Custom Local Schedule Timezone
+          <span className="text-lg leading-none">{showCustomSchedule ? '▾' : '▸'}</span>
+          Custom Destination Sleep Schedule
           <span className="text-xs text-slate-500 font-normal">(optional)</span>
         </button>
 
-        {showCustomTz && (
+        {showCustomSchedule && (
           <div className="pl-4 border-l-2 border-slate-700 space-y-3">
             <p className="text-xs text-slate-400 leading-relaxed">
-              Use this if you'll be keeping a different schedule than the local timezone.
-              For example, visiting family who sleep on a different schedule, or working
-              remotely on a home-country schedule.
+              Use this if you'll be keeping a different sleep schedule than your home routine.
+              For example, if you normally sleep at midnight but plan to sleep at 10pm at your destination.
+              Leave blank to default to your home sleep times.
             </p>
-            <TimezoneSelect
-              label="Local Schedule Timezone"
-              value={localScheduleTimezone}
-              onChange={setLocalScheduleTimezone}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-slate-300">Destination Bedtime</label>
+                <input
+                  type="time"
+                  value={destSleepTime}
+                  onChange={e => setDestSleepTime(e.target.value)}
+                  className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-slate-300">Destination Wake Time</label>
+                <input
+                  type="time"
+                  value={destWakeTime}
+                  onChange={e => setDestWakeTime(e.target.value)}
+                  className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
           </div>
         )}
       </section>

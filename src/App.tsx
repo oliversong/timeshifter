@@ -12,7 +12,8 @@ function planToStorable(plan: FlightPlanDates): FlightPlan {
     homeWakeTime: plan.homeWakeTime,
     departureTimezone: plan.departureTimezone,
     arrivalTimezone: plan.arrivalTimezone,
-    localScheduleTimezone: plan.localScheduleTimezone,
+    destSleepTime: plan.destSleepTime,
+    destWakeTime: plan.destWakeTime,
     departureTime: plan.departureTime.toISO() ?? '',
     arrivalTime: plan.arrivalTime.toISO() ?? '',
     daysAtDestination: plan.daysAtDestination,
@@ -71,7 +72,7 @@ export default function App() {
                 <span>·</span>
                 <span>0.5mg melatonin (science-backed dose)</span>
                 <span>·</span>
-                <span>Custom schedule timezone</span>
+                <span>Custom destination schedule</span>
               </div>
             </div>
             <FlightForm initialPlan={savedPlan} onSubmit={handleSubmit} />
@@ -87,10 +88,12 @@ export default function App() {
                 <span>To</span>
                 <span className="font-medium text-white">{currentPlan.arrivalTimezone}</span>
               </div>
-              {currentPlan.localScheduleTimezone && (
+              {(currentPlan.destSleepTime || currentPlan.destWakeTime) && (
                 <div className="flex justify-between text-slate-300">
-                  <span>Local schedule</span>
-                  <span className="font-medium text-indigo-300">{currentPlan.localScheduleTimezone}</span>
+                  <span>Destination schedule</span>
+                  <span className="font-medium text-indigo-300">
+                    sleep {currentPlan.destSleepTime ?? currentPlan.homeSleepTime} / wake {currentPlan.destWakeTime ?? currentPlan.homeWakeTime}
+                  </span>
                 </div>
               )}
               <div className="flex justify-between text-slate-300">
@@ -106,7 +109,6 @@ export default function App() {
               plans={plans}
               homeTimezone={currentPlan.homeTimezone}
               destTimezone={currentPlan.arrivalTimezone}
-              localScheduleTimezone={currentPlan.localScheduleTimezone}
             />
           </div>
         ) : null}

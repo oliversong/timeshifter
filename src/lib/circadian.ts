@@ -85,24 +85,24 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
     homeWakeTime,
     departureTimezone,
     arrivalTimezone,
-    localScheduleTimezone,
+    destSleepTime,
+    destWakeTime,
     departureTime,
     arrivalTime,
     daysAtDestination,
   } = flight
 
-  // Display timezone for destination days
-  const destDisplayTz = localScheduleTimezone || arrivalTimezone
+  // Display timezone for destination days is always the arrival timezone
+  const destDisplayTz = arrivalTimezone
 
   // Compute home sleep/wake in minutes from midnight
   const homeSleepMin = minutesFromMidnight(homeSleepTime)
   const homeWakeMin = minutesFromMidnight(homeWakeTime)
 
   // Determine destination wake/sleep times
-  // Default: same clock time as home but in destination tz
-  // If localScheduleTimezone is set, use home times in that tz
-  const destWakeMin = homeWakeMin
-  const destSleepMin = homeSleepMin
+  // If the user specified custom destination sleep times, use those; otherwise keep home times
+  const destWakeMin = destWakeTime ? minutesFromMidnight(destWakeTime) : homeWakeMin
+  const destSleepMin = destSleepTime ? minutesFromMidnight(destSleepTime) : homeSleepMin
 
   // Total timezone offset difference (positive = destination is east = need to advance clock)
   const depDate = departureTime.setZone(departureTimezone)
