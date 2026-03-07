@@ -22,6 +22,26 @@ function tmin(wakeTime: DateTime): DateTime {
   return wakeTime.minus(Duration.fromMillis(hoursToMs(2)))
 }
 
+/**
+ * Push a light recommendation, clipping to the waking window [wake, sleep].
+ * If the clipped window has zero duration, the rec is dropped entirely.
+ */
+function pushLight(
+  recs: Recommendation[],
+  type: 'seek-light' | 'avoid-light',
+  start: DateTime,
+  end: DateTime,
+  wake: DateTime,
+  sleep: DateTime,
+  note: string,
+): void {
+  const clippedStart = dtMax(start, wake)
+  const clippedEnd   = dtMin(end,   sleep)
+  if (clippedEnd > clippedStart) {
+    recs.push({ type, startTime: clippedStart, endTime: clippedEnd, note })
+  }
+}
+
 function addHours(dt: DateTime, hours: number): DateTime {
   return dt.plus(Duration.fromMillis(hoursToMs(hours)))
 }
@@ -349,36 +369,29 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
         }
       }
 
-      // ── Light before departure ──
+      // ── Light before departure (clip to waking hours before takeoff) ──
+      const flightLightSleep = dtMin(sleepDateTime, departureTime)
       if (advancing) {
         if (tminTime > departureTime.setZone(homeTimezone)) {
-          recommendations.push({
-            type: 'avoid-light',
-            startTime: addHours(tminTime, -3),
-            endTime: tminTime,
-            note: 'Avoid bright light before your temperature minimum to help advance your clock eastward.',
-          })
+          pushLight(recommendations, 'avoid-light',
+            addHours(tminTime, -3), tminTime,
+            wakeDateTime, flightLightSleep,
+            'Avoid bright light before your temperature minimum to help advance your clock eastward.')
         } else {
-          recommendations.push({
-            type: 'seek-light',
-            startTime: addHours(tminTime, 2),
-            endTime: addHours(tminTime, 5),
-            note: 'Seek bright light after your temperature minimum to advance your clock for eastward travel.',
-          })
+          pushLight(recommendations, 'seek-light',
+            addHours(tminTime, 2), addHours(tminTime, 5),
+            wakeDateTime, flightLightSleep,
+            'Seek bright light after your temperature minimum to advance your clock for eastward travel.')
         }
       } else if (delaying) {
-        recommendations.push({
-          type: 'seek-light',
-          startTime: addHours(tminTime, -3),
-          endTime: tminTime,
-          note: 'Seek bright light before your temperature minimum to delay your clock for westward travel.',
-        })
-        recommendations.push({
-          type: 'avoid-light',
-          startTime: tminTime,
-          endTime: addHours(tminTime, 3),
-          note: 'Avoid bright light after your temperature minimum when traveling west.',
-        })
+        pushLight(recommendations, 'seek-light',
+          addHours(tminTime, -3), tminTime,
+          wakeDateTime, flightLightSleep,
+          'Seek bright light before your temperature minimum to delay your clock for westward travel.')
+        pushLight(recommendations, 'avoid-light',
+          tminTime, addHours(tminTime, 3),
+          wakeDateTime, flightLightSleep,
+          'Avoid bright light after your temperature minimum when traveling west.')
       }
 
     } else if (isArrivalDay || isDestDay) {
@@ -400,33 +413,25 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
         note: '0.5mg melatonin 30 min before sleep is more effective for clock-shifting than higher doses (3mg+). It signals the body to begin the sleep transition.',
       })
 
-      // Light recommendations based on outbound direction
+      // Light recommendations based on outbound direction (clipped to waking hours)
       if (advancing) {
-        recommendations.push({
-          type: 'avoid-light',
-          startTime: addHours(tminTime, -3),
-          endTime: tminTime,
-          note: 'Avoid bright light in the early morning to prevent delaying your clock further. Stay in dim light or wear sunglasses.',
-        })
-        recommendations.push({
-          type: 'seek-light',
-          startTime: addHours(tminTime, 1),
-          endTime: addHours(tminTime, 4),
-          note: 'Get bright light exposure after your temperature minimum. This is the most powerful signal to advance your clock.',
-        })
+        pushLight(recommendations, 'avoid-light',
+          addHours(tminTime, -3), tminTime,
+          wakeDateTime, sleepDateTime,
+          'Avoid bright light in the early morning to prevent delaying your clock further. Stay in dim light or wear sunglasses.')
+        pushLight(recommendations, 'seek-light',
+          addHours(tminTime, 1), addHours(tminTime, 4),
+          wakeDateTime, sleepDateTime,
+          'Get bright light exposure after your temperature minimum. This is the most powerful signal to advance your clock.')
       } else if (delaying) {
-        recommendations.push({
-          type: 'seek-light',
-          startTime: addHours(tminTime, -3),
-          endTime: tminTime,
-          note: 'Get bright light before your temperature minimum to delay your clock for westward adjustment.',
-        })
-        recommendations.push({
-          type: 'avoid-light',
-          startTime: tminTime,
-          endTime: addHours(tminTime, 3),
-          note: 'Avoid bright light in this window when traveling west — it would advance your clock in the wrong direction.',
-        })
+        pushLight(recommendations, 'seek-light',
+          addHours(tminTime, -3), tminTime,
+          wakeDateTime, sleepDateTime,
+          'Get bright light before your temperature minimum to delay your clock for westward adjustment.')
+        pushLight(recommendations, 'avoid-light',
+          tminTime, addHours(tminTime, 3),
+          wakeDateTime, sleepDateTime,
+          'Avoid bright light in this window when traveling west — it would advance your clock in the wrong direction.')
       }
 
       // Caffeine windows
@@ -539,36 +544,29 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
         }
       }
 
-      // Light on return flight day (shifting back toward home)
+      // Light on return flight day (clipped to waking hours before takeoff)
+      const retLightSleep = dtMin(sleepDateTime, returnDepartureTime)
       if (retAdvancing) {
         if (tminTime > returnDepartureTime.setZone(returnDepartureTimezone)) {
-          recommendations.push({
-            type: 'avoid-light',
-            startTime: addHours(tminTime, -3),
-            endTime: tminTime,
-            note: 'Avoid bright light before your temperature minimum to help re-advance your clock back home.',
-          })
+          pushLight(recommendations, 'avoid-light',
+            addHours(tminTime, -3), tminTime,
+            wakeDateTime, retLightSleep,
+            'Avoid bright light before your temperature minimum to help re-advance your clock back home.')
         } else {
-          recommendations.push({
-            type: 'seek-light',
-            startTime: addHours(tminTime, 2),
-            endTime: addHours(tminTime, 5),
-            note: 'Seek bright light after your temperature minimum to advance your clock back toward home.',
-          })
+          pushLight(recommendations, 'seek-light',
+            addHours(tminTime, 2), addHours(tminTime, 5),
+            wakeDateTime, retLightSleep,
+            'Seek bright light after your temperature minimum to advance your clock back toward home.')
         }
       } else if (retDelaying) {
-        recommendations.push({
-          type: 'seek-light',
-          startTime: addHours(tminTime, -3),
-          endTime: tminTime,
-          note: 'Get bright light before your temperature minimum to delay your clock back toward home.',
-        })
-        recommendations.push({
-          type: 'avoid-light',
-          startTime: tminTime,
-          endTime: addHours(tminTime, 3),
-          note: 'Avoid bright light after your temperature minimum when re-adjusting westward.',
-        })
+        pushLight(recommendations, 'seek-light',
+          addHours(tminTime, -3), tminTime,
+          wakeDateTime, retLightSleep,
+          'Get bright light before your temperature minimum to delay your clock back toward home.')
+        pushLight(recommendations, 'avoid-light',
+          tminTime, addHours(tminTime, 3),
+          wakeDateTime, retLightSleep,
+          'Avoid bright light after your temperature minimum when re-adjusting westward.')
       }
 
     } else if (isReturnArrivalDay || isPostReturn) {
@@ -590,31 +588,23 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
       })
 
       if (retAdvancing) {
-        recommendations.push({
-          type: 'avoid-light',
-          startTime: addHours(tminTime, -3),
-          endTime: tminTime,
-          note: 'Avoid bright light in the early morning to re-advance your clock back home.',
-        })
-        recommendations.push({
-          type: 'seek-light',
-          startTime: addHours(tminTime, 1),
-          endTime: addHours(tminTime, 4),
-          note: 'Get bright light exposure after your temperature minimum to advance your clock back home.',
-        })
+        pushLight(recommendations, 'avoid-light',
+          addHours(tminTime, -3), tminTime,
+          wakeDateTime, sleepDateTime,
+          'Avoid bright light in the early morning to re-advance your clock back home.')
+        pushLight(recommendations, 'seek-light',
+          addHours(tminTime, 1), addHours(tminTime, 4),
+          wakeDateTime, sleepDateTime,
+          'Get bright light exposure after your temperature minimum to advance your clock back home.')
       } else if (retDelaying) {
-        recommendations.push({
-          type: 'seek-light',
-          startTime: addHours(tminTime, -3),
-          endTime: tminTime,
-          note: 'Get bright light before your temperature minimum to re-delay your clock back home.',
-        })
-        recommendations.push({
-          type: 'avoid-light',
-          startTime: tminTime,
-          endTime: addHours(tminTime, 3),
-          note: 'Avoid bright light after your temperature minimum when re-adjusting westward.',
-        })
+        pushLight(recommendations, 'seek-light',
+          addHours(tminTime, -3), tminTime,
+          wakeDateTime, sleepDateTime,
+          'Get bright light before your temperature minimum to re-delay your clock back home.')
+        pushLight(recommendations, 'avoid-light',
+          tminTime, addHours(tminTime, 3),
+          wakeDateTime, sleepDateTime,
+          'Avoid bright light after your temperature minimum when re-adjusting westward.')
       }
 
       const caffeineOkEnd = sleepDateTime.minus({ hours: 6 })
@@ -651,18 +641,14 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
             dose: '0.5mg',
             note: 'Start taking melatonin before bed to begin advancing your clock before departure.',
           })
-          recommendations.push({
-            type: 'avoid-light',
-            startTime: addHours(tminTime, -3),
-            endTime: tminTime,
-            note: 'Avoid bright light early in the morning to help advance your clock.',
-          })
-          recommendations.push({
-            type: 'seek-light',
-            startTime: addHours(tminTime, 1),
-            endTime: addHours(tminTime, 4),
-            note: 'Seek bright light in late morning to advance your circadian rhythm.',
-          })
+          pushLight(recommendations, 'avoid-light',
+            addHours(tminTime, -3), tminTime,
+            wakeDateTime, sleepDateTime,
+            'Avoid bright light early in the morning to help advance your clock.')
+          pushLight(recommendations, 'seek-light',
+            addHours(tminTime, 1), addHours(tminTime, 4),
+            wakeDateTime, sleepDateTime,
+            'Seek bright light in late morning to advance your circadian rhythm.')
         } else if (delaying) {
           recommendations.push({
             type: 'melatonin',
@@ -670,12 +656,10 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
             dose: '0.5mg',
             note: 'Take melatonin slightly later than usual to begin delaying your clock before departure.',
           })
-          recommendations.push({
-            type: 'seek-light',
-            startTime: addHours(tminTime, -3),
-            endTime: tminTime,
-            note: 'Get bright light early to delay your clock for westward travel.',
-          })
+          pushLight(recommendations, 'seek-light',
+            addHours(tminTime, -3), tminTime,
+            wakeDateTime, sleepDateTime,
+            'Get bright light early to delay your clock for westward travel.')
         }
 
         const caffeineOkEnd = sleepDateTime.minus({ hours: 6 })

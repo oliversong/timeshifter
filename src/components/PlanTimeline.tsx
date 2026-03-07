@@ -100,6 +100,9 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
       : []),
   ]
 
+  // Flat list of all recommendations across all days (for cross-midnight rendering)
+  const allRecs = useMemo(() => plans.flatMap(p => p.recommendations), [plans])
+
   // Legend rows (without melatonin — shown separately in sleep col)
   const legendItems = useMemo(
     () => (Object.entries(META) as [RecommendationType, typeof META[RecommendationType]][])
@@ -292,7 +295,16 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
         {/* Day sections */}
         {plans.map((plan, dayIdx) => {
           const dayDate    = plan.date.setZone(displayTz)
-          const dayStartMs = plan.date.toMillis()
+          const dayStartMs = dayDate.startOf('day').toMillis()
+          const dayEndMs   = dayStartMs + DAY_MS
+
+          // Include recs from any plan that overlaps this day's 24hr window
+          // (so cross-midnight events appear on both sides of midnight)
+          const dayRecs = allRecs.filter(r => {
+            const rStart = r.startTime.toMillis()
+            const rEnd   = (r.endTime ?? r.startTime.plus({ minutes: 30 })).toMillis()
+            return rStart < dayEndMs && rEnd > dayStartMs
+          })
 
           return (
             <div key={dayIdx}>
@@ -343,11 +355,11 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
 
                 {/* Activity columns */}
                 {COLUMNS.map((col, ci) => {
-                  const colRecs = plan.recommendations.filter(r =>
+                  const colRecs = dayRecs.filter(r =>
                     (col.types as string[]).includes(r.type)
                   )
                   const melRecs = col.key === 'sleep'
-                    ? plan.recommendations.filter(r => r.type === 'melatonin')
+                    ? dayRecs.filter(r => r.type === 'melatonin')
                     : []
 
                   return (
