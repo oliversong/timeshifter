@@ -396,10 +396,16 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
 
     } else if (isArrivalDay || isDestDay) {
       // Destination days: recommend based on shifted schedule
+      // For arrival day, show the ARRIVAL EVENING sleep (tonight → next morning).
+      // Using sleepDateTime.minus({days:1}) would point to the previous night which
+      // was during the flight — causing that block to bleed into the departure day
+      // panel via the allRecs cross-day filter.
+      const sleepRecStart = isArrivalDay ? sleepDateTime : sleepDateTime.minus({ days: 1 })
+      const sleepRecEnd   = isArrivalDay ? wakeDateTime.plus({ days: 1 }) : wakeDateTime
       recommendations.push({
         type: 'sleep',
-        startTime: sleepDateTime.minus({ days: 1 }),
-        endTime: wakeDateTime,
+        startTime: sleepRecStart,
+        endTime: sleepRecEnd,
         note: isArrivalDay
           ? 'Try to sleep at this time to start syncing to your destination schedule.'
           : 'Maintain this sleep window to continue adjusting your circadian rhythm.',
