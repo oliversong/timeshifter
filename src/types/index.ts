@@ -34,6 +34,7 @@ export type RecommendationType =
   | 'avoid-light'
   | 'caffeine-ok'
   | 'avoid-caffeine'
+  | 'flight'
 
 export interface Recommendation {
   type: RecommendationType

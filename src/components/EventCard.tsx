@@ -52,6 +52,13 @@ const TYPE_CONFIG = {
     border: 'border-red-800',
     text: 'text-red-300',
   },
+  'flight': {
+    icon: '✈️',
+    label: 'Flight',
+    bg: 'bg-sky-950',
+    border: 'border-sky-800',
+    text: 'text-sky-300',
+  },
 } as const
 
 interface Props {

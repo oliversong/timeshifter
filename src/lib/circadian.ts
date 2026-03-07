@@ -1,4 +1,11 @@
 import { DateTime, Duration } from 'luxon'
+
+function dtMax(a: DateTime, b: DateTime): DateTime {
+  return a.toMillis() >= b.toMillis() ? a : b
+}
+function dtMin(a: DateTime, b: DateTime): DateTime {
+  return a.toMillis() <= b.toMillis() ? a : b
+}
 import type { FlightPlanDates, DayPlan, Recommendation } from '../types'
 
 function parseTimeInZone(timeStr: string, zone: string, date: DateTime): DateTime {
@@ -196,51 +203,114 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
     const delaying = shiftHrs < 0
 
     if (isFlightDay) {
-      // Flight day: special handling
-      // Recommend: sleep/wake for the pre-flight portion
+      // ── Pre-flight: previous night's sleep ──
       recommendations.push({
         type: 'sleep',
-        startTime: sleepDateTime.minus({ days: 1 }),  // previous night's sleep
+        startTime: sleepDateTime.minus({ days: 1 }),
         endTime: wakeDateTime,
-        note: 'Wake up and prepare for departure',
+        note: 'Get a good night\'s sleep before your flight. Try not to stay up too late — you\'ll need your circadian system in good shape.',
       })
 
-      // Melatonin: if departing into destination night (i.e. it will be night at destination when we board)
-      const depLocalAtDest = departureTime.setZone(arrivalTimezone)
-      const destHourAtDep = depLocalAtDest.hour
-      const isDestNightAtDeparture = destHourAtDep >= 20 || destHourAtDep < 8
-      if (isDestNightAtDeparture) {
-        recommendations.push({
-          type: 'melatonin',
-          startTime: departureTime.minus({ minutes: 30 }),
-          dose: '0.5mg',
-          note: 'Take melatonin 30min before boarding — it\'s nighttime at your destination. This helps signal your body to prepare for sleep.',
-        })
+      // ── Flight band (spans full departure → arrival) ──
+      const flightDurStr = (() => {
+        const h = Math.floor(flightDurationHrs)
+        const m = Math.round((flightDurationHrs - h) * 60)
+        return m > 0 ? `${h}h ${m}m` : `${h}h`
+      })()
+      recommendations.push({
+        type: 'flight',
+        startTime: departureTime,
+        endTime: arrivalTime,
+        note: `Flight duration: ${flightDurStr}. Your recommendations below tell you when to sleep, take melatonin, and avoid caffeine during the flight.`,
+      })
+
+      // ── Compute on-plane sleep window ──
+      // Goal: sleep during destination nighttime to align body clock.
+      // Destination "night" = destSleepTime → destWakeTime the next morning.
+      const destSleepHr   = Math.floor(destSleepMin / 60)
+      const destSleepMn   = destSleepMin % 60
+      const destWakeHr    = Math.floor(destWakeMin / 60)
+      const destWakeMn    = destWakeMin % 60
+
+      const depAtDest = departureTime.setZone(arrivalTimezone)
+
+      // Find the next occurrence of destSleepTime at destination after boarding
+      let nextDestSleep = depAtDest.set({ hour: destSleepHr, minute: destSleepMn, second: 0, millisecond: 0 })
+      if (nextDestSleep <= depAtDest) nextDestSleep = nextDestSleep.plus({ days: 1 })
+
+      // Check if we're boarding during destination nighttime (already past sleep time)
+      const prevDestSleep = nextDestSleep.minus({ days: 1 })
+      let nextDestWake    = prevDestSleep.set({ hour: destWakeHr, minute: destWakeMn }).plus({ days: 1 })
+      if (nextDestWake <= prevDestSleep) nextDestWake = nextDestWake.plus({ days: 1 })
+      const boardingDuringDestNight = depAtDest >= prevDestSleep && depAtDest < nextDestWake
+
+      let targetSleepStart: DateTime
+      let targetSleepEnd: DateTime
+
+      if (boardingDuringDestNight) {
+        // Already night at destination → sleep ASAP after boarding
+        targetSleepStart = departureTime
+        targetSleepEnd   = nextDestWake
+      } else {
+        // Daytime at destination → stay awake until destination sleep time
+        targetSleepStart = nextDestSleep
+        targetSleepEnd   = nextDestSleep.set({ hour: destWakeHr, minute: destWakeMn }).plus({ days: 1 })
+        if (targetSleepEnd <= nextDestSleep) targetSleepEnd = targetSleepEnd.plus({ days: 1 })
       }
 
-      // During flight: if destination night overlaps with flight, recommend sleep
-      const flightStart = departureTime
-      const flightEnd = arrivalTime
-      // Check if any portion of the flight is "night" at destination
-      const destMidnightDuringFlight = flightStart.setZone(arrivalTimezone).set({ hour: 22, minute: 0 }).toMillis()
-      if (destMidnightDuringFlight > flightStart.toMillis() && destMidnightDuringFlight < flightEnd.toMillis()) {
-        const sleepOnPlane = DateTime.fromMillis(destMidnightDuringFlight).setZone(homeTimezone)
-        const wakeOnPlane = addHours(sleepOnPlane, Math.min(8, flightDurationHrs / 2))
-        if (wakeOnPlane.toMillis() < flightEnd.toMillis()) {
+      // Clamp to actual flight window
+      const planeSleepStart = dtMax(targetSleepStart, departureTime)
+      const planeSleepEnd   = dtMin(targetSleepEnd,   arrivalTime)
+
+      if (planeSleepEnd.toMillis() - planeSleepStart.toMillis() > 30 * 60 * 1000) {
+        const sleepHrs = (planeSleepEnd.toMillis() - planeSleepStart.toMillis()) / 3600000
+        const sleepHrsStr = `${Math.floor(sleepHrs)}h ${Math.round((sleepHrs % 1) * 60)}m`
+
+        recommendations.push({
+          type: 'sleep',
+          startTime: planeSleepStart,
+          endTime: planeSleepEnd,
+          note: boardingDuringDestNight
+            ? `It's already nighttime at your destination when you board. Try to sleep from the start of the flight for ~${sleepHrsStr}. Use an eye mask and earplugs. Recline your seat and avoid screens.`
+            : `Stay awake until this point — it's daytime at your destination. Then try to sleep for ~${sleepHrsStr} to align with destination nighttime. Use an eye mask and earplugs.`,
+        })
+
+        // Melatonin: 30 min before plane sleep (or at boarding if sleep is immediate)
+        const melTime = planeSleepStart.minus({ minutes: 30 })
+        const actualMelTime = dtMax(melTime, departureTime)
+        recommendations.push({
+          type: 'melatonin',
+          startTime: actualMelTime,
+          dose: '0.5mg',
+          note: boardingDuringDestNight
+            ? 'Take 0.5mg melatonin at boarding — it\'s nighttime at your destination and you should sleep soon. 0.5mg is the optimal clock-shifting dose; higher doses (3mg) cause grogginess but shift the clock no better.'
+            : `Take 0.5mg melatonin 30 minutes before your target sleep window on the plane (${planeSleepStart.setZone(arrivalTimezone).toFormat('h:mm a')} destination time).`,
+        })
+
+        // Avoid caffeine 6 hours before plane sleep
+        const noCaffStart = planeSleepStart.minus({ hours: 6 })
+        const actualNoCaffStart = dtMax(noCaffStart, departureTime)
+        if (actualNoCaffStart < planeSleepStart) {
+          if (actualNoCaffStart > departureTime) {
+            recommendations.push({
+              type: 'caffeine-ok',
+              startTime: departureTime,
+              endTime: actualNoCaffStart,
+              note: 'Caffeine is fine during this window on the plane. It helps you stay alert and awake while it\'s daytime at your destination.',
+            })
+          }
           recommendations.push({
-            type: 'sleep',
-            startTime: sleepOnPlane,
-            endTime: wakeOnPlane,
-            note: `Sleep on the plane during destination nighttime hours to start adjusting your body clock.`,
+            type: 'avoid-caffeine',
+            startTime: actualNoCaffStart,
+            endTime: planeSleepStart,
+            note: 'Avoid caffeine during this window — you\'ll want to fall asleep soon. Caffeine has a 5–6 hour half-life and will interfere with your ability to sleep on the plane.',
           })
         }
       }
 
-      // Light advice before departure
+      // ── Light before departure ──
       if (advancing) {
-        // Advance: get light after Tmin, avoid before Tmin
         if (tminTime > departureTime.setZone(homeTimezone)) {
-          // Tmin is after departure - complicated; just avoid bright light in morning
           recommendations.push({
             type: 'avoid-light',
             startTime: addHours(tminTime, -3),
@@ -256,7 +326,6 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
           })
         }
       } else if (delaying) {
-        // Delay: avoid light after Tmin, seek light before Tmin
         recommendations.push({
           type: 'seek-light',
           startTime: addHours(tminTime, -3),
