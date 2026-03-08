@@ -138,6 +138,57 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
     })
   }, [mergedDays, allRecs])
 
+  // Compute awake gaps per merged day: each gap between consecutive sleep
+  // blocks within a calendar day, with position info for rendering.
+  const awakeGaps = useMemo(() => {
+    return mergedDays.map((md, idx) => {
+      const dayStartMs = md.dayDate.startOf('day').toMillis()
+      const dayEndMs   = dayStartMs + DAY_MS
+      const dayRecs    = mergedDayRecs[idx]
+      const sleepRecs  = dayRecs.filter(r => r.type === 'sleep' && r.endTime)
+
+      // Collect all sleep edges clipped to this day
+      const sleepEdges: { start: number; end: number }[] = []
+      for (const r of sleepRecs) {
+        const s = Math.max(r.startTime.toMillis(), dayStartMs) - dayStartMs
+        const e = Math.min(r.endTime!.toMillis(), dayEndMs) - dayStartMs
+        if (e > s) sleepEdges.push({ start: s, end: e })
+      }
+      sleepEdges.sort((a, b) => a.start - b.start)
+
+      // Merge overlapping sleep edges
+      const merged: { start: number; end: number }[] = []
+      for (const edge of sleepEdges) {
+        const last = merged[merged.length - 1]
+        if (last && edge.start <= last.end) {
+          last.end = Math.max(last.end, edge.end)
+        } else {
+          merged.push({ ...edge })
+        }
+      }
+
+      // Gaps between merged sleep blocks = awake periods
+      const gaps: { startMs: number; endMs: number; dur: string }[] = []
+      for (let i = 0; i < merged.length - 1; i++) {
+        const gapStart = merged[i].end
+        const gapEnd   = merged[i + 1].start
+        if (gapEnd - gapStart > 30 * 60_000) { // only show gaps > 30min
+          gaps.push({ startMs: gapStart, endMs: gapEnd, dur: fmtDur(gapStart + dayStartMs, gapEnd + dayStartMs) })
+        }
+      }
+      // Also gap from day start to first sleep (if sleep doesn't start at 0)
+      if (merged.length > 0 && merged[0].start > 30 * 60_000) {
+        gaps.push({ startMs: 0, endMs: merged[0].start, dur: fmtDur(dayStartMs, merged[0].start + dayStartMs) })
+      }
+      // Gap from last sleep end to day end
+      if (merged.length > 0 && DAY_MS - merged[merged.length - 1].end > 30 * 60_000) {
+        gaps.push({ startMs: merged[merged.length - 1].end, endMs: DAY_MS, dur: fmtDur(merged[merged.length - 1].end + dayStartMs, dayEndMs) })
+      }
+
+      return gaps
+    })
+  }, [mergedDays, mergedDayRecs])
+
   // Legend rows (without melatonin — shown separately in sleep col)
   const legendItems = useMemo(
     () => (Object.entries(META) as [RecommendationType, typeof META[RecommendationType]][])
@@ -514,6 +565,37 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
                               </span>
                             )}
                           </button>
+                        )
+                      })}
+
+                      {/* Awake duration labels between sleep blocks */}
+                      {col.key === 'sleep' && awakeGaps[dayIdx]?.map((gap, gi) => {
+                        const top    = (gap.startMs / 3_600_000) * PX_PER_HR
+                        const height = (gap.endMs - gap.startMs) / 3_600_000 * PX_PER_HR
+                        if (height < 14) return null
+                        return (
+                          <div
+                            key={`awake-${gi}`}
+                            className="absolute flex items-center justify-center pointer-events-none"
+                            style={{
+                              top,
+                              left:   2,
+                              right:  2,
+                              height,
+                              zIndex: 1,
+                            }}
+                          >
+                            <span style={{
+                              fontSize:      8,
+                              fontWeight:    600,
+                              color:         '#f59e0b88',
+                              letterSpacing: '0.03em',
+                              textTransform: 'uppercase',
+                              whiteSpace:    'nowrap',
+                            }}>
+                              {height >= 28 ? `awake · ${gap.dur}` : gap.dur}
+                            </span>
+                          </div>
                         )
                       })}
                     </div>
