@@ -121,25 +121,18 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
     return result
   }, [plans, displayTz])
 
-  // Per merged-day recs — overlap logic for all types including flights.
-  // Since merged days have unique calendar dates, no flight dedup is needed.
-  // Sleep recs are still deduplicated so each appears on only one day.
+  // Per merged-day recs — show all recs that overlap each calendar day.
+  // Sleep recs that span midnight (e.g. 9 PM–5 AM) correctly appear on
+  // both days, clipped to each day's bounds by the rendering code below.
+  // No dedup needed: each night has exactly one sleep rec ("tonight's sleep"
+  // convention in generatePlan), so there are no duplicate objects.
   const mergedDayRecs = useMemo(() => {
-    const shownSleep = new Set<Recommendation>()
     return mergedDays.map(md => {
       const dayStartMs = md.dayDate.startOf('day').toMillis()
       const dayEndMs   = dayStartMs + DAY_MS
       return allRecs.filter(r => {
         const rStart = r.startTime.toMillis()
         const rEnd   = (r.endTime ?? r.startTime.plus({ minutes: 30 })).toMillis()
-        if (r.type === 'sleep') {
-          if (shownSleep.has(r)) return false
-          if (rStart < dayEndMs && rEnd > dayStartMs) {
-            shownSleep.add(r)
-            return true
-          }
-          return false
-        }
         return rStart < dayEndMs && rEnd > dayStartMs
       })
     })
