@@ -264,13 +264,9 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
     const retDelaying = retShiftHrs < 0
 
     if (isFlightDay) {
-      // ── Pre-flight: previous night's sleep ──
-      recommendations.push({
-        type: 'sleep',
-        startTime: sleepDateTime.minus({ days: 1 }),
-        endTime: wakeDateTime,
-        note: 'Get a good night\'s sleep before your flight. Try not to stay up too late — you\'ll need your circadian system in good shape.',
-      })
+      // Note: pre-flight "last night's sleep" is NOT generated here —
+      // the previous day (day -1) already creates it as "tonight's sleep".
+      // Generating it again with different interpolated times caused overlapping blocks.
 
       // ── Flight band (spans full departure → arrival) ──
       const flightDurStr = (() => {
@@ -396,12 +392,11 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
 
     } else if (isArrivalDay || isDestDay) {
       // Destination days: recommend based on shifted schedule
-      // For arrival day, show the ARRIVAL EVENING sleep (tonight → next morning).
-      // Using sleepDateTime.minus({days:1}) would point to the previous night which
-      // was during the flight — causing that block to bleed into the departure day
-      // panel via the allRecs cross-day filter.
-      const sleepRecStart = isArrivalDay ? sleepDateTime : sleepDateTime.minus({ days: 1 })
-      const sleepRecEnd   = isArrivalDay ? wakeDateTime.plus({ days: 1 }) : wakeDateTime
+      // Always use "tonight's sleep" convention: bedtime tonight → wake tomorrow.
+      // The previous day already generates its own "tonight" rec covering last night.
+      // Generating "last night" here with different interpolated times caused overlapping blocks.
+      const sleepRecStart = sleepDateTime
+      const sleepRecEnd   = wakeDateTime.plus({ days: 1 })
       recommendations.push({
         type: 'sleep',
         startTime: sleepRecStart,
@@ -456,13 +451,8 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
       })
 
     } else if (isReturnFlightDay) {
-      // ── Pre-return-flight: previous night's sleep at destination ──
-      recommendations.push({
-        type: 'sleep',
-        startTime: sleepDateTime.minus({ days: 1 }),
-        endTime: wakeDateTime,
-        note: 'Get a good night\'s sleep before your return flight. Your body is still partly on destination time.',
-      })
+      // Note: pre-return-flight "last night's sleep" is NOT generated here —
+      // the previous day (last dest day) already creates it as "tonight's sleep".
 
       // ── Return flight band ──
       const retFlightDurStr = (() => {
@@ -577,10 +567,11 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
 
     } else if (isReturnArrivalDay || isPostReturn) {
       // Post-return days: shifting back to home schedule
+      // Use "tonight's sleep" convention (same as all other day types)
       recommendations.push({
         type: 'sleep',
-        startTime: sleepDateTime.minus({ days: 1 }),
-        endTime: wakeDateTime,
+        startTime: sleepDateTime,
+        endTime: wakeDateTime.plus({ days: 1 }),
         note: isReturnArrivalDay
           ? 'Try to sleep at this time to re-sync with your home schedule.'
           : 'Maintain this sleep window to continue adjusting back to your home rhythm.',
