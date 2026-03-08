@@ -138,6 +138,41 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
     })
   }, [mergedDays, allRecs])
 
+  // Compute awake duration per merged day.
+  // "Awake" = gap between the end of the last sleep block that ends today
+  // and the start of the next sleep block that begins today.
+  const awakeDurations = useMemo(() => {
+    return mergedDays.map((md, idx) => {
+      const dayStartMs = md.dayDate.startOf('day').toMillis()
+      const dayEndMs   = dayStartMs + DAY_MS
+      const dayRecs    = mergedDayRecs[idx]
+      const sleepRecs  = dayRecs.filter(r => r.type === 'sleep' && r.endTime)
+
+      // Find the wake-up time: end of a sleep block that ends during this day
+      let wakeMs: number | null = null
+      for (const r of sleepRecs) {
+        const endMs = r.endTime!.toMillis()
+        if (endMs > dayStartMs && endMs < dayEndMs) {
+          if (wakeMs === null || endMs > wakeMs) wakeMs = endMs
+        }
+      }
+
+      // Find the sleep-start time: start of a sleep block that begins during this day
+      let sleepStartMs: number | null = null
+      for (const r of sleepRecs) {
+        const startMs = r.startTime.toMillis()
+        if (startMs >= dayStartMs && startMs < dayEndMs) {
+          if (sleepStartMs === null || startMs < sleepStartMs) sleepStartMs = startMs
+        }
+      }
+
+      if (wakeMs !== null && sleepStartMs !== null && sleepStartMs > wakeMs) {
+        return fmtDur(wakeMs, sleepStartMs)
+      }
+      return null
+    })
+  }, [mergedDays, mergedDayRecs])
+
   // Legend rows (without melatonin — shown separately in sleep col)
   const legendItems = useMemo(
     () => (Object.entries(META) as [RecommendationType, typeof META[RecommendationType]][])
@@ -351,6 +386,11 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
                   {dayDate.toFormat('EEE, MMM d')}
                 </span>
                 <span className="text-slate-500" style={{ fontSize: 10 }}>{md.label}</span>
+                {awakeDurations[dayIdx] && (
+                  <span className="text-amber-400/70" style={{ fontSize: 9, fontWeight: 600 }}>
+                    awake {awakeDurations[dayIdx]}
+                  </span>
+                )}
               </div>
 
               {/* 24-hour content grid */}
