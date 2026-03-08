@@ -1427,3 +1427,165 @@ describe('generatePlan - no overlapping sleep events', () => {
     }
   })
 })
+
+// ── Return flight: midnight home sleep time ─────────────────────────────────
+
+describe('generatePlan - return flight with midnight home sleep', () => {
+  // User's exact scenario: SF→Beijing, home sleep midnight-8am, dest sleep 21:30-5:30
+  // Return: PEK 7:20pm BJT → SFO 3:50pm PST (same calendar day)
+  // 7:20pm BJT = 3:20am PST (boarding during home night)
+  const flight = makePlan({
+    homeTimezone: 'America/Los_Angeles',
+    homeSleepTime: '00:00',
+    homeWakeTime: '08:00',
+    departureTimezone: 'America/Los_Angeles',
+    arrivalTimezone: 'Asia/Shanghai',
+    destSleepTime: '21:30',
+    destWakeTime: '05:30',
+    departureTime: DateTime.fromObject(
+      { year: 2026, month: 3, day: 4, hour: 13, minute: 0 },
+      { zone: 'America/Los_Angeles' }
+    ),
+    arrivalTime: DateTime.fromObject(
+      { year: 2026, month: 3, day: 5, hour: 17, minute: 0 },
+      { zone: 'Asia/Shanghai' }
+    ),
+    returnDepartureTimezone: 'Asia/Shanghai',
+    returnDepartureTime: DateTime.fromObject(
+      { year: 2026, month: 3, day: 8, hour: 19, minute: 20 },
+      { zone: 'Asia/Shanghai' }
+    ),
+    returnArrivalTimezone: 'America/Los_Angeles',
+    returnArrivalTime: DateTime.fromObject(
+      { year: 2026, month: 3, day: 8, hour: 15, minute: 50 },
+      { zone: 'America/Los_Angeles' }
+    ),
+  })
+
+  it('on-plane sleep ends at home wake time (8am PST), not at flight arrival', () => {
+    const plans = generatePlan(flight)
+    const retDay = findDayByLabel(plans, 'Return flight day')!
+    const sleepRec = retDay.recommendations.find(r => r.type === 'sleep')!
+
+    // Sleep should start at departure (boarding during home night)
+    expect(sleepRec.startTime.toMillis()).toBe(flight.returnDepartureTime.toMillis())
+
+    // Sleep should end at 8am PST (home wake time), NOT at 3:50pm (flight arrival)
+    const sleepEndPST = sleepRec.endTime!.setZone('America/Los_Angeles')
+    expect(sleepEndPST.hour).toBe(8)
+    expect(sleepEndPST.minute).toBe(0)
+  })
+
+  it('on-plane sleep is ~4-5 hours, not the entire flight', () => {
+    const plans = generatePlan(flight)
+    const retDay = findDayByLabel(plans, 'Return flight day')!
+    const sleepRec = retDay.recommendations.find(r => r.type === 'sleep')!
+    const sleepHours = (sleepRec.endTime!.toMillis() - sleepRec.startTime.toMillis()) / 3600000
+    // March 8 2026 is DST spring-forward: departure is 4:20am PDT, wake at 8am PDT = 3h40m
+    expect(sleepHours).toBeGreaterThanOrEqual(3)
+    expect(sleepHours).toBeLessThanOrEqual(5)
+  })
+
+  it('has caffeine-ok window after on-plane sleep until arrival', () => {
+    const plans = generatePlan(flight)
+    const retDay = findDayByLabel(plans, 'Return flight day')!
+    const cafOk = retDay.recommendations.find(r =>
+      r.type === 'caffeine-ok' && r.note.includes('waking up')
+    )
+    expect(cafOk).toBeDefined()
+
+    // Should start at plane sleep end (8am PST)
+    const cafStartPST = cafOk!.startTime.setZone('America/Los_Angeles')
+    expect(cafStartPST.hour).toBe(8)
+
+    // Should end at flight arrival (3:50pm PST)
+    expect(cafOk!.endTime!.toMillis()).toBe(flight.returnArrivalTime.toMillis())
+  })
+
+  it('return arrival day caffeine-ok does NOT start before flight lands', () => {
+    const plans = generatePlan(flight)
+    const retArrDay = findDayByLabel(plans, 'Return arrival day')!
+    const cafOk = retArrDay.recommendations.find(r => r.type === 'caffeine-ok')
+
+    if (cafOk) {
+      // caffeine-ok must start at or after flight arrival
+      expect(cafOk.startTime.toMillis()).toBeGreaterThanOrEqual(
+        flight.returnArrivalTime.toMillis()
+      )
+    }
+  })
+
+  it('no caffeine-ok window overlaps with on-plane sleep on return flight/arrival days', () => {
+    const plans = generatePlan(flight)
+    const retDay = findDayByLabel(plans, 'Return flight day')!
+    const retArrDay = findDayByLabel(plans, 'Return arrival day')!
+    const returnDays = [retDay, retArrDay]
+
+    // Get sleep recs from the return flight day (on-plane sleep)
+    const planeSleep = retDay.recommendations.filter(r => r.type === 'sleep' && r.endTime)
+    // Get all caffeine-ok recs from return flight + arrival days
+    const allCaffOk = returnDays.flatMap(p =>
+      p.recommendations.filter(r => r.type === 'caffeine-ok' && r.endTime)
+    )
+
+    for (const sleep of planeSleep) {
+      for (const caf of allCaffOk) {
+        const overlaps =
+          sleep.startTime.toMillis() < caf.endTime!.toMillis() &&
+          caf.startTime.toMillis() < sleep.endTime!.toMillis()
+        if (overlaps) {
+          throw new Error(
+            `Caffeine-ok overlaps with on-plane sleep:\n` +
+            `  Sleep: ${sleep.startTime.toISO()} – ${sleep.endTime!.toISO()}\n` +
+            `  Caffeine: ${caf.startTime.toISO()} – ${caf.endTime!.toISO()}`
+          )
+        }
+      }
+    }
+  })
+})
+
+// ── Outbound flight: midnight dest sleep time ───────────────────────────────
+
+describe('generatePlan - outbound flight with midnight dest sleep', () => {
+  // Test the outbound equivalent of the midnight bug
+  const flight = makePlan({
+    homeTimezone: 'Asia/Shanghai',
+    homeSleepTime: '23:00',
+    homeWakeTime: '07:00',
+    departureTimezone: 'Asia/Shanghai',
+    arrivalTimezone: 'America/Los_Angeles',
+    destSleepTime: '00:00',
+    destWakeTime: '08:00',
+    departureTime: DateTime.fromObject(
+      { year: 2025, month: 6, day: 15, hour: 17, minute: 0 },
+      { zone: 'Asia/Shanghai' }
+    ),
+    arrivalTime: DateTime.fromObject(
+      { year: 2025, month: 6, day: 15, hour: 10, minute: 0 },
+      { zone: 'America/Los_Angeles' }
+    ),
+    returnDepartureTimezone: 'America/Los_Angeles',
+    returnDepartureTime: DateTime.fromObject(
+      { year: 2025, month: 6, day: 22, hour: 11, minute: 0 },
+      { zone: 'America/Los_Angeles' }
+    ),
+    returnArrivalTimezone: 'Asia/Shanghai',
+    returnArrivalTime: DateTime.fromObject(
+      { year: 2025, month: 6, day: 23, hour: 15, minute: 0 },
+      { zone: 'Asia/Shanghai' }
+    ),
+  })
+
+  it('on-plane sleep duration is reasonable (not the entire flight)', () => {
+    const plans = generatePlan(flight)
+    const depDay = findDayByLabel(plans, 'Departure day')!
+    const sleepRecs = depDay.recommendations.filter(r => r.type === 'sleep')
+    for (const rec of sleepRecs) {
+      if (rec.endTime) {
+        const hours = (rec.endTime.toMillis() - rec.startTime.toMillis()) / 3600000
+        expect(hours).toBeLessThanOrEqual(10)
+      }
+    }
+  })
+})

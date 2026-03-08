@@ -297,7 +297,7 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
 
       // Check if we're boarding during destination nighttime (already past sleep time)
       const prevDestSleep = nextDestSleep.minus({ days: 1 })
-      let nextDestWake    = prevDestSleep.set({ hour: destWakeHr, minute: destWakeMn }).plus({ days: 1 })
+      let nextDestWake    = prevDestSleep.set({ hour: destWakeHr, minute: destWakeMn })
       if (nextDestWake <= prevDestSleep) nextDestWake = nextDestWake.plus({ days: 1 })
       const boardingDuringDestNight = depAtDest >= prevDestSleep && depAtDest < nextDestWake
 
@@ -311,7 +311,7 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
       } else {
         // Daytime at destination → stay awake until destination sleep time
         targetSleepStart = nextDestSleep
-        targetSleepEnd   = nextDestSleep.set({ hour: destWakeHr, minute: destWakeMn }).plus({ days: 1 })
+        targetSleepEnd   = nextDestSleep.set({ hour: destWakeHr, minute: destWakeMn })
         if (targetSleepEnd <= nextDestSleep) targetSleepEnd = targetSleepEnd.plus({ days: 1 })
       }
 
@@ -479,7 +479,7 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
       if (nextHomeSleep <= retDepAtHome) nextHomeSleep = nextHomeSleep.plus({ days: 1 })
 
       const prevHomeSleep = nextHomeSleep.minus({ days: 1 })
-      let nextHomeWake    = prevHomeSleep.set({ hour: homeWakeHr, minute: homeWakeMn }).plus({ days: 1 })
+      let nextHomeWake    = prevHomeSleep.set({ hour: homeWakeHr, minute: homeWakeMn })
       if (nextHomeWake <= prevHomeSleep) nextHomeWake = nextHomeWake.plus({ days: 1 })
       const boardingDuringHomeNight = retDepAtHome >= prevHomeSleep && retDepAtHome < nextHomeWake
 
@@ -491,7 +491,7 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
         retTargetSleepEnd   = nextHomeWake
       } else {
         retTargetSleepStart = nextHomeSleep
-        retTargetSleepEnd   = nextHomeSleep.set({ hour: homeWakeHr, minute: homeWakeMn }).plus({ days: 1 })
+        retTargetSleepEnd   = nextHomeSleep.set({ hour: homeWakeHr, minute: homeWakeMn })
         if (retTargetSleepEnd <= nextHomeSleep) retTargetSleepEnd = retTargetSleepEnd.plus({ days: 1 })
       }
 
@@ -536,6 +536,16 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
             startTime: actualRetNoCaffStart,
             endTime: retPlaneSleepStart,
             note: 'Avoid caffeine — you\'ll want to sleep soon to re-sync with your home schedule.',
+          })
+        }
+
+        // Caffeine OK after waking up on the plane
+        if (retPlaneSleepEnd < returnArrivalTime) {
+          recommendations.push({
+            type: 'caffeine-ok',
+            startTime: retPlaneSleepEnd,
+            endTime: returnArrivalTime,
+            note: 'Caffeine is fine after waking up — it will help you stay alert for the rest of the flight.',
           })
         }
       }
@@ -604,19 +614,25 @@ export function generatePlan(flight: FlightPlanDates): DayPlan[] {
           'Avoid bright light after your temperature minimum when re-adjusting westward.')
       }
 
+      const caffeineOkStart = isReturnArrivalDay ? dtMax(wakeDateTime, returnArrivalTime) : wakeDateTime
       const caffeineOkEnd = sleepDateTime.minus({ hours: 6 })
-      recommendations.push({
-        type: 'caffeine-ok',
-        startTime: wakeDateTime,
-        endTime: caffeineOkEnd,
-        note: 'Caffeine is fine during this window.',
-      })
-      recommendations.push({
-        type: 'avoid-caffeine',
-        startTime: caffeineOkEnd,
-        endTime: sleepDateTime,
-        note: 'Avoid caffeine in the last 6 hours before sleep.',
-      })
+      if (caffeineOkEnd > caffeineOkStart) {
+        recommendations.push({
+          type: 'caffeine-ok',
+          startTime: caffeineOkStart,
+          endTime: caffeineOkEnd,
+          note: 'Caffeine is fine during this window.',
+        })
+      }
+      const avoidCaffStart = isReturnArrivalDay ? dtMax(caffeineOkEnd, returnArrivalTime) : caffeineOkEnd
+      if (avoidCaffStart < sleepDateTime) {
+        recommendations.push({
+          type: 'avoid-caffeine',
+          startTime: avoidCaffStart,
+          endTime: sleepDateTime,
+          note: 'Avoid caffeine in the last 6 hours before sleep.',
+        })
+      }
 
     } else if (isPreDep) {
       // Pre-departure: start shifting gradually
