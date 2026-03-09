@@ -382,7 +382,6 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
         {mergedDays.map((md, dayIdx) => {
           const dayDate    = md.dayDate
           const dayStartMs = dayDate.startOf('day').toMillis()
-          const dayEndMs   = dayStartMs + DAY_MS
 
           const dayRecs = mergedDayRecs[dayIdx]
 
