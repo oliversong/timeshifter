@@ -89,6 +89,7 @@ function fmtDur(startMs: number, endMs: number): string {
 export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleTimezone, sidebarInfo, onEditFlight }: Props) {
   const [tzView,   setTzView]   = useState<TzView>('dest')
   const [selected, setSelected] = useState<Recommendation | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const timelineRef = useRef<HTMLDivElement>(null)
 
   const saveAsImage = useCallback(async () => {
@@ -318,17 +319,54 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
       className="flex min-h-screen bg-slate-900 text-white"
       style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
     >
+      {/* ── Mobile menu button ── */}
+      <button
+        type="button"
+        onClick={() => setSidebarOpen(true)}
+        className="md:hidden fixed top-2 left-2 z-50 rounded-lg bg-slate-800/90 border border-slate-700/50 p-2 text-slate-300 hover:text-white transition-colors"
+        style={{ backdropFilter: 'blur(8px)' }}
+        aria-label="Open menu"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M3 12h18M3 6h18M3 18h18" />
+        </svg>
+      </button>
+
+      {/* ── Sidebar backdrop (mobile only) ── */}
+      {sidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/60"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ── Left sidebar ── */}
       <aside
-        className="w-52 shrink-0 sticky top-0 h-screen overflow-y-auto border-r border-slate-700/40 flex flex-col"
+        className={`
+          w-52 shrink-0 sticky top-0 h-screen overflow-y-auto border-r border-slate-700/40 flex flex-col
+          max-md:fixed max-md:z-50 max-md:top-0 max-md:left-0 max-md:bottom-0 max-md:transition-transform max-md:duration-200
+          ${sidebarOpen ? 'max-md:translate-x-0' : 'max-md:-translate-x-full'}
+        `}
         style={{ backgroundColor: '#080f1c' }}
       >
         <div className="p-4 space-y-4 flex-1">
           {/* Branding + edit */}
           <div className="space-y-1.5">
-            <div>
-              <h1 className="text-white font-bold tracking-tight" style={{ fontSize: 15 }}>Timeshifter</h1>
-              <p className="text-slate-500" style={{ fontSize: 9 }}>Free jetlag planner</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-white font-bold tracking-tight" style={{ fontSize: 15 }}>Timeshifter</h1>
+                <p className="text-slate-500" style={{ fontSize: 9 }}>Free jetlag planner</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(false)}
+                className="md:hidden text-slate-500 hover:text-white transition-colors p-1"
+                aria-label="Close menu"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
             </div>
             <div className="flex items-center gap-3">
               <button
