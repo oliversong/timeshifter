@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
+import { toPng } from 'html-to-image'
 import type { DayPlan, Recommendation, RecommendationType } from '../types'
 import { getUtcOffset, formatTime } from '../lib/timezone'
 
@@ -88,6 +89,23 @@ function fmtDur(startMs: number, endMs: number): string {
 export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleTimezone, sidebarInfo, onEditFlight }: Props) {
   const [tzView,   setTzView]   = useState<TzView>('dest')
   const [selected, setSelected] = useState<Recommendation | null>(null)
+  const timelineRef = useRef<HTMLDivElement>(null)
+
+  const saveAsImage = useCallback(async () => {
+    if (!timelineRef.current) return
+    try {
+      const dataUrl = await toPng(timelineRef.current, {
+        backgroundColor: '#0f172a',
+        pixelRatio: 2,
+      })
+      const link = document.createElement('a')
+      link.download = 'timeshifter-plan.png'
+      link.href = dataUrl
+      link.click()
+    } catch (err) {
+      console.error('Failed to save image:', err)
+    }
+  }, [])
 
   const displayTz   = tzView === 'home' ? homeTimezone : destTimezone
   const secondaryTz = displayTz !== homeTimezone ? homeTimezone : undefined
@@ -296,6 +314,7 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
   // ── Timeline ──────────────────────────────────────────────────────────────
   return (
     <div
+      ref={timelineRef}
       className="flex min-h-screen bg-slate-900 text-white"
       style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
     >
@@ -311,14 +330,25 @@ export function PlanTimeline({ plans, homeTimezone, destTimezone, localScheduleT
               <h1 className="text-white font-bold tracking-tight" style={{ fontSize: 15 }}>Timeshifter</h1>
               <p className="text-slate-500" style={{ fontSize: 9 }}>Free jetlag planner</p>
             </div>
-            <button
-              type="button"
-              onClick={onEditFlight}
-              className="text-indigo-400 hover:text-indigo-300 transition-colors"
-              style={{ fontSize: 11 }}
-            >
-              ← Edit flight
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onEditFlight}
+                className="text-indigo-400 hover:text-indigo-300 transition-colors"
+                style={{ fontSize: 11 }}
+              >
+                ← Edit flight
+              </button>
+              <button
+                type="button"
+                onClick={saveAsImage}
+                className="text-slate-400 hover:text-white transition-colors"
+                style={{ fontSize: 11 }}
+                title="Save schedule as image"
+              >
+                📷 Save
+              </button>
+            </div>
           </div>
 
           {/* Flight summary */}
